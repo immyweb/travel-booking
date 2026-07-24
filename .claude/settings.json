@@ -1,0 +1,40 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read -r f; case \"$(basename \"$f\")\" in .env|.env.test|.env.local|credentials.json) jq -n --arg f \"$f\" '{hookSpecificOutput:{hookEventName:\"PreToolUse\",permissionDecision:\"deny\",permissionDecisionReason:(\"Blocked: writes to secret file \\($f) are not allowed\")}}';; esac; }"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read -r f; case \"$f\" in *.js|*.jsx|*.ts|*.tsx|*.mjs|*.cjs) bun eslint --fix \"$f\";; esac; } 2>/dev/null || true",
+            "statusMessage": "Running ESLint..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | xargs bunx prettier --write"
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "accesslint@accesslint": true,
+    "mattpocock-skills@mattpocock": true
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@travel-booking/web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@travel-booking/core": "workspace:*"
+  }
+}
