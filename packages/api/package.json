@@ -6,10 +6,11 @@
   "scripts": {
     "dev": "bun --env-file=../../.env --watch src/index.ts",
     "start": "bun --env-file=../../.env src/index.ts",
-    "test": "vitest run",
+    "test": "bun --bun --env-file=../../.env --env-file=.env.test vitest run",
     "typecheck": "tsc --noEmit",
     "db:generate": "bun --env-file=../../.env drizzle-kit generate",
-    "db:migrate": "bun --env-file=../../.env src/migrate.ts"
+    "db:migrate": "bun --env-file=../../.env src/migrate.ts",
+    "db:seed": "bun --env-file=../../.env src/seed.ts"
   },
   "dependencies": {
     "@travel-booking/core": "workspace:*",

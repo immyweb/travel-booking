@@ -1,0 +1,99 @@
+import type { CityCentroid, SearchResponse } from '@travel-booking/core';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fetchCities, fetchSearchResults } from '@/lib/api';
+import SearchPage from './page';
+
+vi.mock('@/lib/api', () => ({
+  fetchCities: vi.fn(),
+  fetchSearchResults: vi.fn(),
+}));
+
+const pushMock = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: pushMock }),
+}));
+
+const MOCK_CITIES: CityCentroid[] = [
+  { city: 'Lisbon', country: 'Portugal', coordinates: { latitude: 38.7169, longitude: -9.1399 } },
+  { city: 'Paris', country: 'France', coordinates: { latitude: 48.8566, longitude: 2.3522 } },
+];
+
+const MOCK_SEARCH_RESPONSE: SearchResponse = {
+  pagination: { page: 1, size: 12, total: 2, totalPages: 1 },
+  results: [
+    {
+      id: 'listing-1',
+      title: 'Sunny Alfama studio',
+      images: ['https://images.travel-booking.example/1.jpg'],
+      price: 82,
+      currency: 'EUR',
+      coordinates: { latitude: 38.7127, longitude: -9.1288 },
+      distanceKm: 1.2,
+    },
+    {
+      id: 'listing-2',
+      title: 'Belém riverside loft',
+      images: ['https://images.travel-booking.example/2.jpg'],
+      price: 118,
+      currency: 'EUR',
+      coordinates: { latitude: 38.6971, longitude: -9.2033 },
+      distanceKm: 3.4,
+    },
+  ],
+};
+
+const EMPTY_SEARCH_RESPONSE: SearchResponse = {
+  pagination: { page: 1, size: 12, total: 0, totalPages: 0 },
+  results: [],
+};
+
+beforeEach(() => {
+  vi.mocked(fetchCities).mockResolvedValue(MOCK_CITIES);
+  vi.mocked(fetchSearchResults).mockResolvedValue(MOCK_SEARCH_RESPONSE);
+  pushMock.mockClear();
+});
+
+describe('SearchPage', () => {
+  it('renders listing cards and map pins matching the mocked results', async () => {
+    const ui = await SearchPage({ searchParams: Promise.resolve({}) });
+    render(ui);
+
+    for (const listing of MOCK_SEARCH_RESPONSE.results) {
+      expect(screen.getByRole('img', { name: listing.title })).toBeInTheDocument();
+      expect(screen.getAllByText(`${listing.price} ${listing.currency}`).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('renders the empty state when no listings match', async () => {
+    vi.mocked(fetchSearchResults).mockResolvedValue(EMPTY_SEARCH_RESPONSE);
+
+    const ui = await SearchPage({ searchParams: Promise.resolve({}) });
+    render(ui);
+
+    expect(screen.getByText('No listings match your search')).toBeInTheDocument();
+  });
+
+  it('reflects the city from the URL query params in the picker', async () => {
+    const ui = await SearchPage({
+      searchParams: Promise.resolve({ city: 'Paris', country: 'France' }),
+    });
+    render(ui);
+
+    expect(screen.getByRole('combobox', { name: 'Where to?' })).toHaveTextContent('Paris, France');
+  });
+
+  it('updates the URL when a different city is picked', async () => {
+    const user = userEvent.setup();
+    const ui = await SearchPage({
+      searchParams: Promise.resolve({ city: 'Paris', country: 'France' }),
+    });
+    render(ui);
+
+    await user.click(screen.getByRole('combobox', { name: 'Where to?' }));
+    await user.click(await screen.findByRole('option', { name: 'Lisbon, Portugal' }));
+
+    expect(pushMock).toHaveBeenCalledWith('/search?city=Lisbon&country=Portugal');
+  });
+});
