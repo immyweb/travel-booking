@@ -12,9 +12,15 @@
     "dev": "bun run --parallel --if-present --filter='*' dev",
     "dev:api": "bun run --filter='@travel-booking/api' dev",
     "dev:web": "bun run --filter='@travel-booking/web' dev",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "test": "bun run --parallel --if-present --filter='*' test",
+    "test:api": "bun run --filter='@travel-booking/api' test",
+    "test:web": "bun run --filter='@travel-booking/web' test",
     "typecheck": "bun run --filter='*' typecheck"
   },
   "devDependencies": {
