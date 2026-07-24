@@ -2,7 +2,8 @@
 
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
-import jsxA11y from 'eslint-plugin-jsx-a11y';
+import nextVitals from 'eslint-config-next/core-web-vitals';
+import nextTs from 'eslint-config-next/typescript';
 import eslintConfigPrettier from 'eslint-config-prettier/flat';
 
 export default tseslint.config(
@@ -11,6 +12,11 @@ export default tseslint.config(
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
-  jsxA11y.flatConfigs.recommended,
+  {
+    // eslint-config-next bundles eslint-plugin-jsx-a11y (WCAG AA linting) along
+    // with React/Next-specific rules — only meaningful where JSX lives.
+    files: ['packages/web/**/*.{js,jsx,ts,tsx}'],
+    extends: [...nextVitals, ...nextTs],
+  },
   eslintConfigPrettier,
 );
