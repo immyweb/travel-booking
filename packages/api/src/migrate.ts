@@ -1,4 +1,4 @@
 import { migrate } from 'drizzle-orm/bun-sql/migrator';
-import { db } from './db';
+import { createDb, databaseUrlFromEnv } from './db';
 
-await migrate(db, { migrationsFolder: './drizzle' });
+await migrate(createDb(databaseUrlFromEnv()), { migrationsFolder: './drizzle' });

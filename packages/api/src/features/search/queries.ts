@@ -3,7 +3,7 @@
 // separate slice with its own queries.
 import type { CityCentroid, ListingSummary, SearchQuery } from '@travel-booking/core';
 import { and, eq, sql } from 'drizzle-orm';
-import { db } from '../../db';
+import type { Db } from '../../db';
 import { listings } from '../../schema';
 
 export type SearchListingsResult = {
@@ -11,7 +11,7 @@ export type SearchListingsResult = {
   total: number;
 };
 
-export async function searchListings(query: SearchQuery): Promise<SearchListingsResult> {
+export async function searchListings(db: Db, query: SearchQuery): Promise<SearchListingsResult> {
   const { lat, lng, radiusKm, country, page, size } = query;
   const radiusMeters = radiusKm * 1000;
   const center = sql`ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography`;
@@ -57,7 +57,7 @@ export async function searchListings(query: SearchQuery): Promise<SearchListings
 
 // Averaged from current listings at query time, so it stays correct as the
 // curated catalog grows rather than being a hand-maintained list.
-export async function getCityCentroids(): Promise<CityCentroid[]> {
+export async function getCityCentroids(db: Db): Promise<CityCentroid[]> {
   const rows = await db
     .select({
       city: listings.city,

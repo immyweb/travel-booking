@@ -1,9 +1,10 @@
 import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import { afterEach, describe, expect, it } from 'vitest';
-import { app } from '../../app';
-import { db } from '../../db';
 import { listings } from '../../schema';
+import { createTestContext } from '../../test-support/context';
+
+const { app, db } = createTestContext();
 
 // Isolated from real curated/seed data by a marker country no seed listing uses.
 const TEST_COUNTRY = 'Testland';

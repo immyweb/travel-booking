@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import request from 'supertest';
-import { app } from './app';
+import { createTestContext } from './test-support/context';
+
+const { app } = createTestContext();
 
 describe('GET /health', () => {
   it('returns ok status', async () => {

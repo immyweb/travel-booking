@@ -1,5 +1,5 @@
 import type { Amenity } from '@travel-booking/core';
-import { db } from './db';
+import { createDb, databaseUrlFromEnv, type Db } from './db';
 import { listings } from './schema';
 
 type SeedListing = {
@@ -154,7 +154,7 @@ const SEED_LISTINGS: SeedListing[] = [
   },
 ];
 
-async function seed() {
+async function seed(db: Db) {
   console.log(`Seeding ${SEED_LISTINGS.length} listings...`);
 
   await db.delete(listings);
@@ -168,4 +168,4 @@ async function seed() {
   console.log('Done.');
 }
 
-await seed();
+await seed(createDb(databaseUrlFromEnv()));
