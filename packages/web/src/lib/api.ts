@@ -1,36 +1,48 @@
-import type { CityCentroid, SearchQuery, SearchResponse } from '@travel-booking/core';
+import {
+  CitiesResponseSchema,
+  ErrorResponseSchema,
+  SearchResponseSchema,
+  toSearchParams,
+  type CityCentroid,
+  type SearchQuery,
+  type SearchResponse,
+} from '@travel-booking/core';
 
 // Internal Next.js -> Express connection (ADR-0002): Express stays the
 // single source of truth for data access, so SSR pages fetch over HTTP
 // rather than reading the database directly.
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
+// The api replies with one error envelope for every non-2xx (see
+// api/src/http/errors.ts), so surface the message it produced instead of
+// reducing the failure to a status code. safeParse, because an error from a
+// proxy or load balancer won't be in our envelope.
+async function failed(route: string, response: Response): Promise<never> {
+  const body: unknown = await response.json().catch(() => null);
+  const parsed = ErrorResponseSchema.safeParse(body);
+  const detail = parsed.success ? parsed.data.error.message : response.statusText;
+
+  throw new Error(`${route} failed with status ${response.status}: ${detail}`);
+}
+
 export async function fetchSearchResults(query: SearchQuery): Promise<SearchResponse> {
-  const params = new URLSearchParams({
-    lat: String(query.lat),
-    lng: String(query.lng),
-    radiusKm: String(query.radiusKm),
-    page: String(query.page),
-    size: String(query.size),
+  const response = await fetch(`${API_URL}/search?${toSearchParams(query).toString()}`, {
+    cache: 'no-store',
   });
-  if (query.country) {
-    params.set('country', query.country);
-  }
-
-  const response = await fetch(`${API_URL}/search?${params.toString()}`, { cache: 'no-store' });
   if (!response.ok) {
-    throw new Error(`GET /search failed with status ${response.status}`);
+    await failed('GET /search', response);
   }
 
-  return response.json();
+  // Parsed, not cast: a contract drift fails here at the seam rather than
+  // surfacing as an undefined halfway through rendering a page.
+  return SearchResponseSchema.parse(await response.json());
 }
 
 export async function fetchCities(): Promise<CityCentroid[]> {
   const response = await fetch(`${API_URL}/search/cities`, { cache: 'no-store' });
   if (!response.ok) {
-    throw new Error(`GET /search/cities failed with status ${response.status}`);
+    await failed('GET /search/cities', response);
   }
 
-  const data: { cities: CityCentroid[] } = await response.json();
-  return data.cities;
+  return CitiesResponseSchema.parse(await response.json()).cities;
 }

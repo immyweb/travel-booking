@@ -31,6 +31,27 @@ export const SearchQuerySchema = z.object({
 });
 export type SearchQuery = z.infer<typeof SearchQuerySchema>;
 
+// Lives next to the schema that defines the fields, and derives the query
+// string from whatever SearchQuery holds — so adding a filter to
+// SearchQuerySchema needs no change here and no change in the web fetch
+// module. Scalars and arrays of scalars only: an object-valued filter (nested
+// amenities, say) needs a deliberate decision about its wire encoding.
+export function toSearchParams(query: SearchQuery): URLSearchParams {
+  const params = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined) {
+      continue;
+    }
+
+    for (const item of Array.isArray(value) ? value : [value]) {
+      params.append(key, String(item));
+    }
+  }
+
+  return params;
+}
+
 export const ListingSummarySchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -59,3 +80,19 @@ export const CityCentroidSchema = z.object({
   coordinates: CoordinatesSchema,
 });
 export type CityCentroid = z.infer<typeof CityCentroidSchema>;
+
+export const CitiesResponseSchema = z.object({
+  cities: z.array(CityCentroidSchema),
+});
+export type CitiesResponse = z.infer<typeof CitiesResponseSchema>;
+
+// The envelope every non-2xx response from the api uses. Shared so the web
+// package can read the message the api produced rather than inferring one from
+// the status code.
+export const ErrorResponseSchema = z.object({
+  error: z.object({
+    message: z.string(),
+    details: z.unknown().optional(),
+  }),
+});
+export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;

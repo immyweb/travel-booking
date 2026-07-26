@@ -1,4 +1,8 @@
-import { SearchQuerySchema, SearchResponseSchema } from '@travel-booking/core';
+import {
+  CitiesResponseSchema,
+  SearchQuerySchema,
+  SearchResponseSchema,
+} from '@travel-booking/core';
 import { Router } from 'express';
 import type { Db } from '../../db';
 import { validateQuery } from '../../http/validate';
@@ -12,7 +16,7 @@ export function createSearchRouter(db: Db): Router {
   // into a lat/lng/radiusKm search server-side (ADR-0002 keeps this in Express).
   searchRouter.get('/search/cities', async (_req, res) => {
     const cities = await getCityCentroids(db);
-    res.json({ cities });
+    res.json(CitiesResponseSchema.parse({ cities }));
   });
 
   searchRouter.get(

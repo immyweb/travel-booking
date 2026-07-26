@@ -1,13 +1,5 @@
+import type { ErrorResponse } from '@travel-booking/core';
 import type { ErrorRequestHandler, RequestHandler } from 'express';
-
-// The single envelope every non-2xx response uses, so clients parse one shape
-// whether the failure came from validation, a missing route, or a crash.
-export type ErrorResponse = {
-  error: {
-    message: string;
-    details?: unknown;
-  };
-};
 
 // Throw this from anywhere in a handler. Express 5 forwards both synchronous
 // throws and rejected promises to the error handler below, so routes never

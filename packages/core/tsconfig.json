@@ -1,7 +1,11 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "dist"
+    "outDir": "dist",
+    // For URLSearchParams in toSearchParams. A WHATWG global present in both
+    // Node and the browser, but declared in lib.dom rather than lib.es2022 —
+    // and core is consumed by both packages, so it must typecheck for both.
+    "lib": ["ES2022", "dom"]
   },
   "include": ["src"]
 }
