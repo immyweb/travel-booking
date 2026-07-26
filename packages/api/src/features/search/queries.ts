@@ -1,3 +1,6 @@
+// The Search slice's reads. These query the listings table but belong to
+// Search, not to Listing — a Listing detail read (GET /listings/:id) is a
+// separate slice with its own queries.
 import type { CityCentroid, ListingSummary, SearchQuery } from '@travel-booking/core';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../../db';

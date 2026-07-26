@@ -1,7 +1,7 @@
 import { SearchQuerySchema, SearchResponseSchema } from '@travel-booking/core';
 import { Router } from 'express';
 import { validateQuery } from '../../http/validate';
-import { getCityCentroids, searchListings } from '../listings';
+import { getCityCentroids, searchListings } from './queries';
 
 export const searchRouter = Router();
 

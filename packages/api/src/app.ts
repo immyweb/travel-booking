@@ -1,5 +1,5 @@
 import express from 'express';
-import { searchRouter } from './features/search';
+import { searchRouter } from './features/search/routes';
 import { errorHandler, notFoundHandler } from './http/errors';
 
 export const app = express();
