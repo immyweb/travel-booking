@@ -1,6 +1,6 @@
 import type { Amenity } from '@travel-booking/core';
-import { createDb, databaseUrlFromEnv, type Db } from './db';
-import { listings } from './schema';
+import { createDb, databaseUrlFromEnv, type Db } from '../src/db';
+import { listings } from '../src/schema';
 
 type SeedListing = {
   title: string;
@@ -154,7 +154,8 @@ const SEED_LISTINGS: SeedListing[] = [
   },
 ];
 
-async function seed(db: Db) {
+// Destructive: replaces the whole listings table.
+export async function seed(db: Db) {
   console.log(`Seeding ${SEED_LISTINGS.length} listings...`);
 
   await db.delete(listings);
@@ -168,4 +169,8 @@ async function seed(db: Db) {
   console.log('Done.');
 }
 
-await seed(createDb(databaseUrlFromEnv()));
+// Only runs when this file is the process entry point. Previously a top-level
+// await, so merely importing this module wiped the listings table.
+if (import.meta.main) {
+  await seed(createDb(databaseUrlFromEnv()));
+}
