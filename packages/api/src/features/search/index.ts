@@ -1,5 +1,6 @@
 import { SearchQuerySchema, SearchResponseSchema } from '@travel-booking/core';
 import { Router } from 'express';
+import { validateQuery } from '../../http/validate';
 import { getCityCentroids, searchListings } from '../listings';
 
 export const searchRouter = Router();
@@ -12,25 +13,25 @@ searchRouter.get('/search/cities', async (_req, res) => {
   res.json({ cities });
 });
 
-searchRouter.get('/search', async (req, res) => {
-  const parsed = SearchQuerySchema.safeParse(req.query);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.flatten() });
-    return;
-  }
+searchRouter.get(
+  '/search',
+  validateQuery(SearchQuerySchema, async (query, _req, res) => {
+    const { page, size } = query;
+    const { results, total } = await searchListings(query);
 
-  const { page, size } = parsed.data;
-  const { results, total } = await searchListings(parsed.data);
+    // `parse`, not `safeParse` — a response that doesn't match the contract is
+    // our bug, so it belongs on the 500 path rather than being reported to the
+    // client as if they caused it.
+    const response = SearchResponseSchema.parse({
+      pagination: {
+        page,
+        size,
+        total,
+        totalPages: Math.ceil(total / size),
+      },
+      results,
+    });
 
-  const response = SearchResponseSchema.parse({
-    pagination: {
-      page,
-      size,
-      total,
-      totalPages: Math.ceil(total / size),
-    },
-    results,
-  });
-
-  res.json(response);
-});
+    res.json(response);
+  }),
+);
