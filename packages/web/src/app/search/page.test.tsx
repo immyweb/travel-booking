@@ -1,6 +1,7 @@
 import type { CityCentroid, SearchResponse } from '@travel-booking/core';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { act } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchCities, fetchSearchResults } from '@/lib/api';
 import SearchPage from './page';
@@ -58,7 +59,11 @@ beforeEach(() => {
 describe('SearchPage', () => {
   it('renders listing cards and map pins matching the mocked results', async () => {
     const ui = await SearchPage({ searchParams: Promise.resolve({}) });
-    render(ui);
+    // Results resolve behind a Suspense boundary now, so the render has to
+    // be flushed inside an async act() before the resolved content shows up.
+    await act(async () => {
+      render(ui);
+    });
 
     for (const listing of MOCK_SEARCH_RESPONSE.results) {
       expect(screen.getByRole('img', { name: listing.title })).toBeInTheDocument();
@@ -70,7 +75,9 @@ describe('SearchPage', () => {
     vi.mocked(fetchSearchResults).mockResolvedValue(EMPTY_SEARCH_RESPONSE);
 
     const ui = await SearchPage({ searchParams: Promise.resolve({}) });
-    render(ui);
+    await act(async () => {
+      render(ui);
+    });
 
     expect(screen.getByText('No listings match your search')).toBeInTheDocument();
   });

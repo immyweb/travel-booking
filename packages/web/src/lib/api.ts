@@ -39,7 +39,9 @@ export async function fetchSearchResults(query: SearchQuery): Promise<SearchResp
 }
 
 export async function fetchCities(): Promise<CityCentroid[]> {
-  const response = await fetch(`${API_URL}/search/cities`, { cache: 'no-store' });
+  // Reference data that changes rarely — revalidate on an interval instead
+  // of refetching on every request like the live search results.
+  const response = await fetch(`${API_URL}/search/cities`, { next: { revalidate: 300 } });
   if (!response.ok) {
     await failed('GET /search/cities', response);
   }

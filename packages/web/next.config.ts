@@ -4,6 +4,9 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [{ protocol: 'https', hostname: 'images.travel-booking.example' }],
   },
+  experimental: {
+    optimizePackageImports: ['radix-ui'],
+  },
 };
 
 export default nextConfig;

@@ -1,12 +1,12 @@
 import { AmenitySchema, type Amenity } from '@travel-booking/core';
-import Link from 'next/link';
+import { Suspense } from 'react';
 import { fetchCities, fetchSearchResults } from '@/lib/api';
 import { AmenitiesFilter } from './_components/AmenitiesFilter';
 import { CityPicker } from './_components/CityPicker';
 import { DateRangeFilter } from './_components/DateRangeFilter';
-import { EmptyState } from './_components/EmptyState';
 import { GuestCountFilter } from './_components/GuestCountFilter';
-import { SearchResults } from './_components/SearchResults';
+import { ResultsSkeleton } from './_components/ResultsSkeleton';
+import { SearchResultsSection } from './_components/SearchResultsSection';
 
 function isAmenity(value: string): value is Amenity {
   return AmenitySchema.safeParse(value).success;
@@ -73,7 +73,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     : [];
   const amenities = requestedAmenities.filter(isAmenity);
 
-  const { pagination, results } = await fetchSearchResults({
+  // Not awaited here: the request starts immediately, but resolving it is
+  // deferred to the Suspense boundary below so the filter bar isn't blocked
+  // on data it doesn't need.
+  const resultsPromise = fetchSearchResults({
     lat: selectedCity.coordinates.latitude,
     lng: selectedCity.coordinates.longitude,
     radiusKm: DEFAULT_RADIUS_KM,
@@ -85,18 +88,6 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     page,
     size: PAGE_SIZE,
   });
-
-  const pageHref = (targetPage: number) => {
-    const params = new URLSearchParams({
-      city: selectedCity.city,
-      country: selectedCity.country,
-      ...(checkIn && checkOut ? { checkIn, checkOut } : {}),
-      ...(guests ? { guests: String(guests) } : {}),
-      page: String(targetPage),
-    });
-    for (const amenity of amenities) params.append('amenities', amenity);
-    return `/search?${params.toString()}`;
-  };
 
   return (
     <main className="flex flex-1 flex-col">
@@ -132,28 +123,16 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         />
       </div>
 
-      {results.length === 0 ? <EmptyState /> : <SearchResults results={results} />}
-
-      {pagination.totalPages > 1 && (
-        <nav
-          aria-label="Search results pages"
-          className="flex items-center justify-center gap-4 border-t border-border p-4 text-sm"
-        >
-          {pagination.page > 1 ? (
-            <Link href={pageHref(pagination.page - 1)}>Previous</Link>
-          ) : (
-            <span className="text-muted-foreground">Previous</span>
-          )}
-          <span>
-            Page {pagination.page} of {pagination.totalPages}
-          </span>
-          {pagination.page < pagination.totalPages ? (
-            <Link href={pageHref(pagination.page + 1)}>Next</Link>
-          ) : (
-            <span className="text-muted-foreground">Next</span>
-          )}
-        </nav>
-      )}
+      <Suspense fallback={<ResultsSkeleton />}>
+        <SearchResultsSection
+          resultsPromise={resultsPromise}
+          city={{ city: selectedCity.city, country: selectedCity.country }}
+          checkIn={checkIn}
+          checkOut={checkOut}
+          guests={guests}
+          amenities={amenities}
+        />
+      </Suspense>
     </main>
   );
 }
