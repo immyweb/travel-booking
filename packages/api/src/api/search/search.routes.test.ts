@@ -16,7 +16,7 @@ function pointAtKm(km: number) {
   return { lat: CENTER.lat + km / 111.32, lng: CENTER.lng };
 }
 
-async function seedListing(overrides: { distanceKm: number; title?: string }) {
+async function seedListing(overrides: { distanceKm: number; title?: string; maxGuests?: number }) {
   const point = pointAtKm(overrides.distanceKm);
   const [row] = await db
     .insert(listings)
@@ -24,7 +24,7 @@ async function seedListing(overrides: { distanceKm: number; title?: string }) {
       title: overrides.title ?? `Listing ${overrides.distanceKm}km out`,
       price: 100,
       currency: 'GBP',
-      maxGuests: 2,
+      maxGuests: overrides.maxGuests ?? 2,
       amenities: ['wifi'],
       city: 'London',
       country: TEST_COUNTRY,
@@ -149,6 +149,24 @@ describe('GET /search', () => {
     const ids = response.body.results.map((result: { id: string }) => result.id);
     expect(ids).not.toContain(bookedId);
     expect(ids).toContain(freeId);
+  });
+
+  it('excludes a listing below the requested guest count and includes one meeting/exceeding it', async () => {
+    const tooSmallId = await seedListing({ distanceKm: 2, title: 'Too small', maxGuests: 2 });
+    const bigEnoughId = await seedListing({ distanceKm: 3, title: 'Big enough', maxGuests: 4 });
+
+    const response = await request(app).get('/search').query({
+      lat: CENTER.lat,
+      lng: CENTER.lng,
+      radiusKm: 10,
+      country: TEST_COUNTRY,
+      guests: 4,
+    });
+
+    expect(response.status).toBe(200);
+    const ids = response.body.results.map((result: { id: string }) => result.id);
+    expect(ids).not.toContain(tooSmallId);
+    expect(ids).toContain(bigEnoughId);
   });
 
   it('includes a listing whose existing booking checks out on the requested check-in date', async () => {

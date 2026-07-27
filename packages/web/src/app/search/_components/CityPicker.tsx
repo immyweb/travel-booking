@@ -15,13 +15,14 @@ type CityPickerProps = {
   selectedCity: { city: string; country: string };
   checkIn?: string;
   checkOut?: string;
+  guests?: string;
 };
 
 function cityKey(city: { city: string; country: string }) {
   return `${city.city}::${city.country}`;
 }
 
-export function CityPicker({ cities, selectedCity, checkIn, checkOut }: CityPickerProps) {
+export function CityPicker({ cities, selectedCity, checkIn, checkOut, guests }: CityPickerProps) {
   const router = useRouter();
 
   return (
@@ -35,6 +36,7 @@ export function CityPicker({ cities, selectedCity, checkIn, checkOut }: CityPick
           params.set('checkIn', checkIn);
           params.set('checkOut', checkOut);
         }
+        if (guests) params.set('guests', guests);
         router.push(`/search?${params.toString()}`);
       }}
     >

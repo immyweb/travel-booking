@@ -29,6 +29,7 @@ export const SearchQuerySchema = z
     country: z.string().min(1).optional(),
     checkIn: z.iso.date().optional(),
     checkOut: z.iso.date().optional(),
+    guests: z.coerce.number().int().positive().optional(),
     page: z.coerce.number().int().positive().default(1),
     size: z.coerce.number().int().positive().max(100).default(12),
   })

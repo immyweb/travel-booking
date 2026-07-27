@@ -2,7 +2,7 @@
 // Search, not to Listing — a Listing detail read (GET /listings/:id) is a
 // separate slice with its own queries.
 import type { CityCentroid, ListingSummary, SearchQuery } from '@travel-booking/core';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, gte, sql } from 'drizzle-orm';
 import type { Db } from '../../db/db';
 import { bookings, listings } from '../../db/schema';
 
@@ -12,7 +12,7 @@ export type SearchListingsResult = {
 };
 
 export async function searchListings(db: Db, query: SearchQuery): Promise<SearchListingsResult> {
-  const { lat, lng, radiusKm, country, checkIn, checkOut, page, size } = query;
+  const { lat, lng, radiusKm, country, checkIn, checkOut, guests, page, size } = query;
   const radiusMeters = radiusKm * 1000;
   const center = sql`ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography`;
   const distanceKm = sql<number>`ST_Distance(${listings.location}, ${center}) / 1000`;
@@ -20,6 +20,9 @@ export async function searchListings(db: Db, query: SearchQuery): Promise<Search
   const conditions = [sql`ST_DWithin(${listings.location}, ${center}, ${radiusMeters})`];
   if (country) {
     conditions.push(eq(listings.country, country));
+  }
+  if (guests) {
+    conditions.push(gte(listings.maxGuests, guests));
   }
   if (checkIn && checkOut) {
     // Check-in inclusive, check-out exclusive: an existing booking blocks the

@@ -3,6 +3,7 @@ import { fetchCities, fetchSearchResults } from '@/lib/api';
 import { CityPicker } from './_components/CityPicker';
 import { DateRangeFilter } from './_components/DateRangeFilter';
 import { EmptyState } from './_components/EmptyState';
+import { GuestCountFilter } from './_components/GuestCountFilter';
 import { SearchResults } from './_components/SearchResults';
 
 // No radius-adjustment UI for v1 — a fixed default keeps the "Where to?"
@@ -16,6 +17,7 @@ type SearchPageProps = {
     country?: string;
     checkIn?: string;
     checkOut?: string;
+    guests?: string;
     page?: string;
   }>;
 };
@@ -46,6 +48,15 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const checkIn = hasDateRange ? params.checkIn : undefined;
   const checkOut = hasDateRange ? params.checkOut : undefined;
 
+  // Only a positive integer is a meaningful guest count, so a malformed or
+  // absent value falls back to no filter rather than being sent as-is.
+  const requestedGuests = Number(params.guests);
+  const guests =
+    params.guests && Number.isInteger(requestedGuests) && requestedGuests > 0
+      ? requestedGuests
+      : undefined;
+  const guestsParam = guests !== undefined ? String(guests) : undefined;
+
   const { pagination, results } = await fetchSearchResults({
     lat: selectedCity.coordinates.latitude,
     lng: selectedCity.coordinates.longitude,
@@ -53,6 +64,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     country: selectedCity.country,
     checkIn,
     checkOut,
+    guests,
     page,
     size: PAGE_SIZE,
   });
@@ -62,6 +74,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       city: selectedCity.city,
       country: selectedCity.country,
       ...(checkIn && checkOut ? { checkIn, checkOut } : {}),
+      ...(guests ? { guests: String(guests) } : {}),
       page: String(targetPage),
     }).toString()}`;
 
@@ -73,11 +86,19 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           selectedCity={{ city: selectedCity.city, country: selectedCity.country }}
           checkIn={checkIn}
           checkOut={checkOut}
+          guests={guestsParam}
         />
         <DateRangeFilter
           city={{ city: selectedCity.city, country: selectedCity.country }}
           checkIn={params.checkIn}
           checkOut={params.checkOut}
+          guests={guestsParam}
+        />
+        <GuestCountFilter
+          city={{ city: selectedCity.city, country: selectedCity.country }}
+          checkIn={checkIn}
+          checkOut={checkOut}
+          guests={params.guests}
         />
       </div>
 

@@ -7,15 +7,17 @@ type DateRangeFilterProps = {
   city: { city: string; country: string };
   checkIn?: string;
   checkOut?: string;
+  guests?: string;
 };
 
-export function DateRangeFilter({ city, checkIn, checkOut }: DateRangeFilterProps) {
+export function DateRangeFilter({ city, checkIn, checkOut, guests }: DateRangeFilterProps) {
   const router = useRouter();
 
   function pushDates(nextCheckIn: string | undefined, nextCheckOut: string | undefined) {
     const params = new URLSearchParams({ city: city.city, country: city.country });
     if (nextCheckIn) params.set('checkIn', nextCheckIn);
     if (nextCheckOut) params.set('checkOut', nextCheckOut);
+    if (guests) params.set('guests', guests);
     router.push(`/search?${params.toString()}`);
   }
 

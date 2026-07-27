@@ -159,4 +159,50 @@ describe('SearchPage', () => {
       '/search?city=Paris&country=France&checkIn=2026-08-05&checkOut=2026-08-10',
     );
   });
+
+  it('reflects the guest count from the URL in the guests input', async () => {
+    const ui = await SearchPage({
+      searchParams: Promise.resolve({ city: 'Paris', country: 'France', guests: '4' }),
+    });
+    render(ui);
+
+    expect(screen.getByLabelText('Guests')).toHaveValue(4);
+  });
+
+  it('updates the URL with the new guest count, preserving the selected city', async () => {
+    const ui = await SearchPage({
+      searchParams: Promise.resolve({ city: 'Paris', country: 'France' }),
+    });
+    render(ui);
+
+    fireEvent.change(screen.getByLabelText('Guests'), { target: { value: '3' } });
+
+    expect(pushMock).toHaveBeenCalledWith('/search?city=Paris&country=France&guests=3');
+  });
+
+  it('preserves the guest count when a different city is picked', async () => {
+    const user = userEvent.setup();
+    const ui = await SearchPage({
+      searchParams: Promise.resolve({ city: 'Paris', country: 'France', guests: '4' }),
+    });
+    render(ui);
+
+    await user.click(screen.getByRole('combobox', { name: 'Where to?' }));
+    await user.click(await screen.findByRole('option', { name: 'Lisbon, Portugal' }));
+
+    expect(pushMock).toHaveBeenCalledWith('/search?city=Lisbon&country=Portugal&guests=4');
+  });
+
+  it('preserves the guest count when a check-in date is picked', async () => {
+    const ui = await SearchPage({
+      searchParams: Promise.resolve({ city: 'Paris', country: 'France', guests: '4' }),
+    });
+    render(ui);
+
+    fireEvent.change(screen.getByLabelText('Check-in'), { target: { value: '2026-08-05' } });
+
+    expect(pushMock).toHaveBeenCalledWith(
+      '/search?city=Paris&country=France&checkIn=2026-08-05&guests=4',
+    );
+  });
 });
