@@ -206,7 +206,8 @@ describe('SearchPage', () => {
     );
   });
 
-  it('reflects the selected amenities from the URL in the amenity checkboxes', async () => {
+  it('reflects the selected amenities from the URL in the amenity dropdown', async () => {
+    const user = userEvent.setup();
     const ui = await SearchPage({
       searchParams: Promise.resolve({
         city: 'Paris',
@@ -216,9 +217,11 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    expect(screen.getByRole('checkbox', { name: 'Wifi' })).toBeChecked();
-    expect(screen.getByRole('checkbox', { name: 'Parking' })).toBeChecked();
-    expect(screen.getByRole('checkbox', { name: 'Pool' })).not.toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Amenities (2)' }));
+
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Wifi' })).toBeChecked();
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Parking' })).toBeChecked();
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Pool' })).not.toBeChecked();
   });
 
   it('updates the URL with the new amenity, preserving the selected city', async () => {
@@ -228,7 +231,8 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    await user.click(screen.getByRole('checkbox', { name: 'Wifi' }));
+    await user.click(screen.getByRole('button', { name: 'Amenities' }));
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'Wifi' }));
 
     expect(pushMock).toHaveBeenCalledWith('/search?city=Paris&country=France&amenities=wifi');
   });
@@ -244,7 +248,8 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    await user.click(screen.getByRole('checkbox', { name: 'Wifi' }));
+    await user.click(screen.getByRole('button', { name: 'Amenities (2)' }));
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'Wifi' }));
 
     expect(pushMock).toHaveBeenCalledWith('/search?city=Paris&country=France&amenities=parking');
   });

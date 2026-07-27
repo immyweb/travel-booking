@@ -2,7 +2,13 @@
 
 import { AMENITIES, type Amenity } from '@travel-booking/core';
 import { useRouter } from 'next/navigation';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 type AmenitiesFilterProps = {
   city: { city: string; country: string };
@@ -42,16 +48,26 @@ export function AmenitiesFilter({
   }
 
   return (
-    <div className="flex items-center gap-3">
-      {AMENITIES.map((amenity) => (
-        <label key={amenity} className="flex items-center gap-1.5 text-sm">
-          <Checkbox
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline">
+          Amenities{amenities.length > 0 ? ` (${amenities.length})` : ''}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent>
+        {AMENITIES.map((amenity) => (
+          <DropdownMenuCheckboxItem
+            key={amenity}
             checked={amenities.includes(amenity)}
-            onCheckedChange={(checked) => toggle(amenity, checked === true)}
-          />
-          {amenityLabel(amenity)}
-        </label>
-      ))}
-    </div>
+            // Toggling one amenity shouldn't close the menu — a guest picking
+            // several amenities would otherwise have to reopen it each time.
+            onSelect={(event) => event.preventDefault()}
+            onCheckedChange={(checked) => toggle(amenity, checked)}
+          >
+            {amenityLabel(amenity)}
+          </DropdownMenuCheckboxItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
