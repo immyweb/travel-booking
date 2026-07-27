@@ -1,6 +1,6 @@
 'use client';
 
-import type { CityCentroid } from '@travel-booking/core';
+import type { Amenity, CityCentroid } from '@travel-booking/core';
 import { useRouter } from 'next/navigation';
 import {
   Select,
@@ -16,13 +16,21 @@ type CityPickerProps = {
   checkIn?: string;
   checkOut?: string;
   guests?: string;
+  amenities?: Amenity[];
 };
 
 function cityKey(city: { city: string; country: string }) {
   return `${city.city}::${city.country}`;
 }
 
-export function CityPicker({ cities, selectedCity, checkIn, checkOut, guests }: CityPickerProps) {
+export function CityPicker({
+  cities,
+  selectedCity,
+  checkIn,
+  checkOut,
+  guests,
+  amenities,
+}: CityPickerProps) {
   const router = useRouter();
 
   return (
@@ -37,6 +45,7 @@ export function CityPicker({ cities, selectedCity, checkIn, checkOut, guests }: 
           params.set('checkOut', checkOut);
         }
         if (guests) params.set('guests', guests);
+        for (const amenity of amenities ?? []) params.append('amenities', amenity);
         router.push(`/search?${params.toString()}`);
       }}
     >

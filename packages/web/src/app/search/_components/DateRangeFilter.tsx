@@ -1,5 +1,6 @@
 'use client';
 
+import type { Amenity } from '@travel-booking/core';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 
@@ -8,9 +9,16 @@ type DateRangeFilterProps = {
   checkIn?: string;
   checkOut?: string;
   guests?: string;
+  amenities?: Amenity[];
 };
 
-export function DateRangeFilter({ city, checkIn, checkOut, guests }: DateRangeFilterProps) {
+export function DateRangeFilter({
+  city,
+  checkIn,
+  checkOut,
+  guests,
+  amenities,
+}: DateRangeFilterProps) {
   const router = useRouter();
 
   function pushDates(nextCheckIn: string | undefined, nextCheckOut: string | undefined) {
@@ -18,6 +26,7 @@ export function DateRangeFilter({ city, checkIn, checkOut, guests }: DateRangeFi
     if (nextCheckIn) params.set('checkIn', nextCheckIn);
     if (nextCheckOut) params.set('checkOut', nextCheckOut);
     if (guests) params.set('guests', guests);
+    for (const amenity of amenities ?? []) params.append('amenities', amenity);
     router.push(`/search?${params.toString()}`);
   }
 

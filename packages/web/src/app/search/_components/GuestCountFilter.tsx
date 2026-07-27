@@ -1,5 +1,6 @@
 'use client';
 
+import type { Amenity } from '@travel-booking/core';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 
@@ -8,9 +9,16 @@ type GuestCountFilterProps = {
   checkIn?: string;
   checkOut?: string;
   guests?: string;
+  amenities?: Amenity[];
 };
 
-export function GuestCountFilter({ city, checkIn, checkOut, guests }: GuestCountFilterProps) {
+export function GuestCountFilter({
+  city,
+  checkIn,
+  checkOut,
+  guests,
+  amenities,
+}: GuestCountFilterProps) {
   const router = useRouter();
 
   function pushGuests(nextGuests: string | undefined) {
@@ -18,6 +26,7 @@ export function GuestCountFilter({ city, checkIn, checkOut, guests }: GuestCount
     if (checkIn) params.set('checkIn', checkIn);
     if (checkOut) params.set('checkOut', checkOut);
     if (nextGuests) params.set('guests', nextGuests);
+    for (const amenity of amenities ?? []) params.append('amenities', amenity);
     router.push(`/search?${params.toString()}`);
   }
 

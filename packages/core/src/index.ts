@@ -30,6 +30,14 @@ export const SearchQuerySchema = z
     checkIn: z.iso.date().optional(),
     checkOut: z.iso.date().optional(),
     guests: z.coerce.number().int().positive().optional(),
+    // A single selected amenity arrives as a bare string on the query string
+    // (`amenities=wifi`); only two or more become an array
+    // (`amenities=wifi&amenities=parking`) — normalized to an array either way
+    // so the service always deals with one shape.
+    amenities: z
+      .union([AmenitySchema, z.array(AmenitySchema)])
+      .transform((value) => (Array.isArray(value) ? value : [value]))
+      .optional(),
     page: z.coerce.number().int().positive().default(1),
     size: z.coerce.number().int().positive().max(100).default(12),
   })

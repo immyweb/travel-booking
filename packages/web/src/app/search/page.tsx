@@ -1,10 +1,16 @@
+import { AmenitySchema, type Amenity } from '@travel-booking/core';
 import Link from 'next/link';
 import { fetchCities, fetchSearchResults } from '@/lib/api';
+import { AmenitiesFilter } from './_components/AmenitiesFilter';
 import { CityPicker } from './_components/CityPicker';
 import { DateRangeFilter } from './_components/DateRangeFilter';
 import { EmptyState } from './_components/EmptyState';
 import { GuestCountFilter } from './_components/GuestCountFilter';
 import { SearchResults } from './_components/SearchResults';
+
+function isAmenity(value: string): value is Amenity {
+  return AmenitySchema.safeParse(value).success;
+}
 
 // No radius-adjustment UI for v1 — a fixed default keeps the "Where to?"
 // city picker as the only location control.
@@ -18,6 +24,7 @@ type SearchPageProps = {
     checkIn?: string;
     checkOut?: string;
     guests?: string;
+    amenities?: string | string[];
     page?: string;
   }>;
 };
@@ -57,6 +64,15 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       : undefined;
   const guestsParam = guests !== undefined ? String(guests) : undefined;
 
+  // Unrecognized values (a stale link, a typo) are dropped rather than sent
+  // as-is, mirroring how a malformed guest count falls back to no filter.
+  const requestedAmenities = params.amenities
+    ? Array.isArray(params.amenities)
+      ? params.amenities
+      : [params.amenities]
+    : [];
+  const amenities = requestedAmenities.filter(isAmenity);
+
   const { pagination, results } = await fetchSearchResults({
     lat: selectedCity.coordinates.latitude,
     lng: selectedCity.coordinates.longitude,
@@ -65,18 +81,22 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     checkIn,
     checkOut,
     guests,
+    amenities: amenities.length > 0 ? amenities : undefined,
     page,
     size: PAGE_SIZE,
   });
 
-  const pageHref = (targetPage: number) =>
-    `/search?${new URLSearchParams({
+  const pageHref = (targetPage: number) => {
+    const params = new URLSearchParams({
       city: selectedCity.city,
       country: selectedCity.country,
       ...(checkIn && checkOut ? { checkIn, checkOut } : {}),
       ...(guests ? { guests: String(guests) } : {}),
       page: String(targetPage),
-    }).toString()}`;
+    });
+    for (const amenity of amenities) params.append('amenities', amenity);
+    return `/search?${params.toString()}`;
+  };
 
   return (
     <main className="flex flex-1 flex-col">
@@ -87,18 +107,28 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           checkIn={checkIn}
           checkOut={checkOut}
           guests={guestsParam}
+          amenities={amenities}
         />
         <DateRangeFilter
           city={{ city: selectedCity.city, country: selectedCity.country }}
           checkIn={params.checkIn}
           checkOut={params.checkOut}
           guests={guestsParam}
+          amenities={amenities}
         />
         <GuestCountFilter
           city={{ city: selectedCity.city, country: selectedCity.country }}
           checkIn={checkIn}
           checkOut={checkOut}
           guests={params.guests}
+          amenities={amenities}
+        />
+        <AmenitiesFilter
+          city={{ city: selectedCity.city, country: selectedCity.country }}
+          checkIn={checkIn}
+          checkOut={checkOut}
+          guests={guestsParam}
+          amenities={amenities}
         />
       </div>
 

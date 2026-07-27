@@ -205,4 +205,73 @@ describe('SearchPage', () => {
       '/search?city=Paris&country=France&checkIn=2026-08-05&guests=4',
     );
   });
+
+  it('reflects the selected amenities from the URL in the amenity checkboxes', async () => {
+    const ui = await SearchPage({
+      searchParams: Promise.resolve({
+        city: 'Paris',
+        country: 'France',
+        amenities: ['wifi', 'parking'],
+      }),
+    });
+    render(ui);
+
+    expect(screen.getByRole('checkbox', { name: 'Wifi' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Parking' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Pool' })).not.toBeChecked();
+  });
+
+  it('updates the URL with the new amenity, preserving the selected city', async () => {
+    const user = userEvent.setup();
+    const ui = await SearchPage({
+      searchParams: Promise.resolve({ city: 'Paris', country: 'France' }),
+    });
+    render(ui);
+
+    await user.click(screen.getByRole('checkbox', { name: 'Wifi' }));
+
+    expect(pushMock).toHaveBeenCalledWith('/search?city=Paris&country=France&amenities=wifi');
+  });
+
+  it('removes only the unchecked amenity from the URL, preserving the others selected', async () => {
+    const user = userEvent.setup();
+    const ui = await SearchPage({
+      searchParams: Promise.resolve({
+        city: 'Paris',
+        country: 'France',
+        amenities: ['wifi', 'parking'],
+      }),
+    });
+    render(ui);
+
+    await user.click(screen.getByRole('checkbox', { name: 'Wifi' }));
+
+    expect(pushMock).toHaveBeenCalledWith('/search?city=Paris&country=France&amenities=parking');
+  });
+
+  it('preserves the selected amenities when a different city is picked', async () => {
+    const user = userEvent.setup();
+    const ui = await SearchPage({
+      searchParams: Promise.resolve({ city: 'Paris', country: 'France', amenities: 'wifi' }),
+    });
+    render(ui);
+
+    await user.click(screen.getByRole('combobox', { name: 'Where to?' }));
+    await user.click(await screen.findByRole('option', { name: 'Lisbon, Portugal' }));
+
+    expect(pushMock).toHaveBeenCalledWith('/search?city=Lisbon&country=Portugal&amenities=wifi');
+  });
+
+  it('preserves the selected amenities when a check-in date is picked', async () => {
+    const ui = await SearchPage({
+      searchParams: Promise.resolve({ city: 'Paris', country: 'France', amenities: 'wifi' }),
+    });
+    render(ui);
+
+    fireEvent.change(screen.getByLabelText('Check-in'), { target: { value: '2026-08-05' } });
+
+    expect(pushMock).toHaveBeenCalledWith(
+      '/search?city=Paris&country=France&checkIn=2026-08-05&amenities=wifi',
+    );
+  });
 });

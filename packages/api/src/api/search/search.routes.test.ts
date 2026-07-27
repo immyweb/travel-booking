@@ -1,3 +1,4 @@
+import type { Amenity } from '@travel-booking/core';
 import { eq, inArray } from 'drizzle-orm';
 import request from 'supertest';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -16,7 +17,12 @@ function pointAtKm(km: number) {
   return { lat: CENTER.lat + km / 111.32, lng: CENTER.lng };
 }
 
-async function seedListing(overrides: { distanceKm: number; title?: string; maxGuests?: number }) {
+async function seedListing(overrides: {
+  distanceKm: number;
+  title?: string;
+  maxGuests?: number;
+  amenities?: Amenity[];
+}) {
   const point = pointAtKm(overrides.distanceKm);
   const [row] = await db
     .insert(listings)
@@ -25,7 +31,7 @@ async function seedListing(overrides: { distanceKm: number; title?: string; maxG
       price: 100,
       currency: 'GBP',
       maxGuests: overrides.maxGuests ?? 2,
-      amenities: ['wifi'],
+      amenities: overrides.amenities ?? ['wifi'],
       city: 'London',
       country: TEST_COUNTRY,
       location: { latitude: point.lat, longitude: point.lng },
@@ -167,6 +173,34 @@ describe('GET /search', () => {
     const ids = response.body.results.map((result: { id: string }) => result.id);
     expect(ids).not.toContain(tooSmallId);
     expect(ids).toContain(bigEnoughId);
+  });
+
+  it('excludes a listing missing one of the selected amenities and includes one with all of them', async () => {
+    const missingParkingId = await seedListing({
+      distanceKm: 2,
+      title: 'Missing parking',
+      amenities: ['wifi'],
+    });
+    const hasAllId = await seedListing({
+      distanceKm: 3,
+      title: 'Has all',
+      amenities: ['wifi', 'parking'],
+    });
+
+    const response = await request(app)
+      .get('/search')
+      .query({
+        lat: CENTER.lat,
+        lng: CENTER.lng,
+        radiusKm: 10,
+        country: TEST_COUNTRY,
+        amenities: ['wifi', 'parking'],
+      });
+
+    expect(response.status).toBe(200);
+    const ids = response.body.results.map((result: { id: string }) => result.id);
+    expect(ids).not.toContain(missingParkingId);
+    expect(ids).toContain(hasAllId);
   });
 
   it('includes a listing whose existing booking checks out on the requested check-in date', async () => {
