@@ -1,5 +1,6 @@
 import type { ErrorResponse } from '@travel-booking/core';
 import type { ErrorRequestHandler, RequestHandler } from 'express';
+import type { Logger } from '../logging/logger';
 
 // Throw this from anywhere in a handler. Express 5 forwards both synchronous
 // throws and rejected promises to the error handler below, so routes never
@@ -23,25 +24,29 @@ export const notFoundHandler: RequestHandler = (req) => {
 
 // Must be registered last, and must take four parameters — that arity is how
 // Express recognises a handler as an error handler rather than a route.
-export const errorHandler: ErrorRequestHandler = (err, _req, res, next) => {
-  // Once the response has started there is no envelope left to write; handing
-  // back to Express's default handler is the only way to close the connection.
-  if (res.headersSent) {
-    next(err);
-    return;
-  }
-
-  if (err instanceof ApiError) {
-    const body: ErrorResponse = { error: { message: err.message } };
-    if (err.details !== undefined) {
-      body.error.details = err.details;
+export function createErrorHandler(logger: Logger): ErrorRequestHandler {
+  return (err, _req, res, next) => {
+    // Once the response has started there is no envelope left to write; handing
+    // back to Express's default handler is the only way to close the connection.
+    if (res.headersSent) {
+      next(err);
+      return;
     }
-    res.status(err.status).json(body);
-    return;
-  }
 
-  // Anything else is a bug rather than a client mistake: log it whole, and tell
-  // the client nothing that could expose internals.
-  console.error(err);
-  res.status(500).json({ error: { message: 'Internal Server Error' } } satisfies ErrorResponse);
-};
+    if (err instanceof ApiError) {
+      const body: ErrorResponse = { error: { message: err.message } };
+      if (err.details !== undefined) {
+        body.error.details = err.details;
+      }
+      res.status(err.status).json(body);
+      return;
+    }
+
+    // Anything else is a bug rather than a client mistake: log it whole, and
+    // tell the client nothing that could expose internals. pino-http's own
+    // request-level log line carries method/path/status but not the Error
+    // itself, so this is the one place the stack trace is captured.
+    logger.error(err);
+    res.status(500).json({ error: { message: 'Internal Server Error' } } satisfies ErrorResponse);
+  };
+}

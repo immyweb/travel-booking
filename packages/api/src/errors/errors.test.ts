@@ -1,9 +1,12 @@
 import express from 'express';
+import { pino } from 'pino';
 import request from 'supertest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { ApiError, errorHandler, notFoundHandler } from './errors';
+import { ApiError, createErrorHandler, notFoundHandler } from './errors';
 import { validateQuery } from './validate';
+
+const logger = pino({ level: 'silent' });
 
 // A throwaway app per test keeps these off the real router — and off the
 // database connection that importing `app` would open.
@@ -13,7 +16,7 @@ function appThrowing(err: unknown) {
     throw err;
   });
   local.use(notFoundHandler);
-  local.use(errorHandler);
+  local.use(createErrorHandler(logger));
   return local;
 }
 
@@ -46,7 +49,6 @@ describe('errorHandler', () => {
   });
 
   it('converts an unrecognised rejection into a 500 that leaks nothing', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
     const secret = new Error('connection to postgres://user:hunter2@db failed');
 
     const response = await request(appThrowing(secret)).get('/boom');
@@ -57,7 +59,7 @@ describe('errorHandler', () => {
   });
 
   it('logs the unrecognised error rather than swallowing it', async () => {
-    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const logged = vi.spyOn(logger, 'error').mockImplementation(() => {});
     const err = new Error('boom');
 
     await request(appThrowing(err)).get('/boom');
@@ -86,7 +88,7 @@ describe('validateQuery', () => {
       }),
     );
     local.use(notFoundHandler);
-    local.use(errorHandler);
+    local.use(createErrorHandler(logger));
     return local;
   }
 
