@@ -1,6 +1,6 @@
 import type { Amenity } from '@travel-booking/core';
-import { createDb, databaseUrlFromEnv, type Db } from '../src/db';
-import { listings } from '../src/schema';
+import { createDb, databaseUrlFromEnv, type Db } from '../src/db/db';
+import { listings } from '../src/db/schema';
 
 type SeedListing = {
   title: string;

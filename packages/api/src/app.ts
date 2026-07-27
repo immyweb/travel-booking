@@ -1,7 +1,7 @@
 import express, { type Express } from 'express';
-import type { Db } from './db';
-import { createSearchRouter } from './features/search/routes';
-import { errorHandler, notFoundHandler } from './http/errors';
+import type { Db } from './db/db';
+import { createSearchRouter } from './api/search/search.routes';
+import { errorHandler, notFoundHandler } from './errors/errors';
 
 export type AppDependencies = {
   db: Db;

@@ -3,8 +3,8 @@
 // separate slice with its own queries.
 import type { CityCentroid, ListingSummary, SearchQuery } from '@travel-booking/core';
 import { and, eq, sql } from 'drizzle-orm';
-import type { Db } from '../../db';
-import { listings } from '../../schema';
+import type { Db } from '../../db/db';
+import { listings } from '../../db/schema';
 
 export type SearchListingsResult = {
   results: ListingSummary[];

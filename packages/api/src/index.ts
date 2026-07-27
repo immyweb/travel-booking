@@ -1,5 +1,5 @@
 import { createApp } from './app';
-import { createDb, databaseUrlFromEnv } from './db';
+import { createDb, databaseUrlFromEnv } from './db/db';
 
 // The process entry point, and the only place that turns environment into
 // wiring. Everything below it receives what it needs as an argument.

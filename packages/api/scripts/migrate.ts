@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { migrate } from 'drizzle-orm/bun-sql/migrator';
-import { createDb, databaseUrlFromEnv, type Db } from '../src/db';
+import { createDb, databaseUrlFromEnv, type Db } from '../src/db/db';
 
 // Resolved against this file rather than the working directory, so the script
 // behaves the same however it is invoked.

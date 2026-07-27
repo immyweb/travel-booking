@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import { afterEach, describe, expect, it } from 'vitest';
-import { listings } from '../../schema';
+import { listings } from '../../db/schema';
 import { createTestContext } from '../../test-support/context';
 
 const { app, db } = createTestContext();

@@ -4,9 +4,9 @@ import {
   SearchResponseSchema,
 } from '@travel-booking/core';
 import { Router } from 'express';
-import type { Db } from '../../db';
-import { validateQuery } from '../../http/validate';
-import { getCityCentroids, searchListings } from './queries';
+import type { Db } from '../../db/db';
+import { validateQuery } from '../../errors/validate';
+import { getCityCentroids, searchListings } from './search.service';
 
 export function createSearchRouter(db: Db): Router {
   const searchRouter = Router();

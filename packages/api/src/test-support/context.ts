@@ -1,6 +1,6 @@
 import type { Express } from 'express';
 import { createApp } from '../app';
-import { createDb, databaseUrlFromEnv, type Db } from '../db';
+import { createDb, databaseUrlFromEnv, type Db } from '../db/db';
 
 export type TestContext = {
   app: Express;
