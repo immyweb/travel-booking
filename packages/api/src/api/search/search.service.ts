@@ -4,7 +4,7 @@
 import type { CityCentroid, ListingSummary, SearchQuery } from '@travel-booking/core';
 import { and, eq, sql } from 'drizzle-orm';
 import type { Db } from '../../db/db';
-import { listings } from '../../db/schema';
+import { bookings, listings } from '../../db/schema';
 
 export type SearchListingsResult = {
   results: ListingSummary[];
@@ -12,7 +12,7 @@ export type SearchListingsResult = {
 };
 
 export async function searchListings(db: Db, query: SearchQuery): Promise<SearchListingsResult> {
-  const { lat, lng, radiusKm, country, page, size } = query;
+  const { lat, lng, radiusKm, country, checkIn, checkOut, page, size } = query;
   const radiusMeters = radiusKm * 1000;
   const center = sql`ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography`;
   const distanceKm = sql<number>`ST_Distance(${listings.location}, ${center}) / 1000`;
@@ -20,6 +20,17 @@ export async function searchListings(db: Db, query: SearchQuery): Promise<Search
   const conditions = [sql`ST_DWithin(${listings.location}, ${center}, ${radiusMeters})`];
   if (country) {
     conditions.push(eq(listings.country, country));
+  }
+  if (checkIn && checkOut) {
+    // Check-in inclusive, check-out exclusive: an existing booking blocks the
+    // requested range only if it truly overlaps, so a checkout on day X
+    // doesn't block a new check-in on day X.
+    conditions.push(sql`NOT EXISTS (
+      SELECT 1 FROM ${bookings}
+      WHERE ${bookings.listingId} = ${listings.id}
+        AND ${bookings.checkIn} < ${checkOut}
+        AND ${bookings.checkOut} > ${checkIn}
+    )`);
   }
   const where = and(...conditions);
 

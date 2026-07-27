@@ -1,5 +1,5 @@
 import type { CityCentroid, SearchResponse } from '@travel-booking/core';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchCities, fetchSearchResults } from '@/lib/api';
@@ -95,5 +95,68 @@ describe('SearchPage', () => {
     await user.click(await screen.findByRole('option', { name: 'Lisbon, Portugal' }));
 
     expect(pushMock).toHaveBeenCalledWith('/search?city=Lisbon&country=Portugal');
+  });
+
+  it('preserves the selected date range when a different city is picked', async () => {
+    const user = userEvent.setup();
+    const ui = await SearchPage({
+      searchParams: Promise.resolve({
+        city: 'Paris',
+        country: 'France',
+        checkIn: '2026-08-05',
+        checkOut: '2026-08-10',
+      }),
+    });
+    render(ui);
+
+    await user.click(screen.getByRole('combobox', { name: 'Where to?' }));
+    await user.click(await screen.findByRole('option', { name: 'Lisbon, Portugal' }));
+
+    expect(pushMock).toHaveBeenCalledWith(
+      '/search?city=Lisbon&country=Portugal&checkIn=2026-08-05&checkOut=2026-08-10',
+    );
+  });
+
+  it('reflects check-in/check-out dates from the URL in the date inputs', async () => {
+    const ui = await SearchPage({
+      searchParams: Promise.resolve({
+        city: 'Paris',
+        country: 'France',
+        checkIn: '2026-08-05',
+        checkOut: '2026-08-10',
+      }),
+    });
+    render(ui);
+
+    expect(screen.getByLabelText('Check-in')).toHaveValue('2026-08-05');
+    expect(screen.getByLabelText('Check-out')).toHaveValue('2026-08-10');
+  });
+
+  it('updates the URL with the new check-in date, preserving the selected city', async () => {
+    const ui = await SearchPage({
+      searchParams: Promise.resolve({ city: 'Paris', country: 'France' }),
+    });
+    render(ui);
+
+    fireEvent.change(screen.getByLabelText('Check-in'), { target: { value: '2026-08-05' } });
+
+    expect(pushMock).toHaveBeenCalledWith('/search?city=Paris&country=France&checkIn=2026-08-05');
+  });
+
+  it('updates the URL with the new check-out date, preserving check-in and the selected city', async () => {
+    const ui = await SearchPage({
+      searchParams: Promise.resolve({
+        city: 'Paris',
+        country: 'France',
+        checkIn: '2026-08-05',
+      }),
+    });
+    render(ui);
+
+    fireEvent.change(screen.getByLabelText('Check-out'), { target: { value: '2026-08-10' } });
+
+    expect(pushMock).toHaveBeenCalledWith(
+      '/search?city=Paris&country=France&checkIn=2026-08-05&checkOut=2026-08-10',
+    );
   });
 });

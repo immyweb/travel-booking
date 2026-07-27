@@ -21,14 +21,21 @@ const CoordinatesSchema = z.object({
   longitude: z.number(),
 });
 
-export const SearchQuerySchema = z.object({
-  lat: z.coerce.number().min(-90).max(90),
-  lng: z.coerce.number().min(-180).max(180),
-  radiusKm: z.coerce.number().positive(),
-  country: z.string().min(1).optional(),
-  page: z.coerce.number().int().positive().default(1),
-  size: z.coerce.number().int().positive().max(100).default(12),
-});
+export const SearchQuerySchema = z
+  .object({
+    lat: z.coerce.number().min(-90).max(90),
+    lng: z.coerce.number().min(-180).max(180),
+    radiusKm: z.coerce.number().positive(),
+    country: z.string().min(1).optional(),
+    checkIn: z.iso.date().optional(),
+    checkOut: z.iso.date().optional(),
+    page: z.coerce.number().int().positive().default(1),
+    size: z.coerce.number().int().positive().max(100).default(12),
+  })
+  .refine((query) => (query.checkIn === undefined) === (query.checkOut === undefined), {
+    message: 'checkIn and checkOut must be supplied together',
+    path: ['checkIn'],
+  });
 export type SearchQuery = z.infer<typeof SearchQuerySchema>;
 
 // Lives next to the schema that defines the fields, and derives the query

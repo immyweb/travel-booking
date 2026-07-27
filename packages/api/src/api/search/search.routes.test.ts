@@ -1,7 +1,7 @@
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import request from 'supertest';
 import { afterEach, describe, expect, it } from 'vitest';
-import { listings } from '../../db/schema';
+import { bookings, listings } from '../../db/schema';
 import { createTestContext } from '../../test-support/context';
 
 const { app, db } = createTestContext();
@@ -36,7 +36,16 @@ async function seedListing(overrides: { distanceKm: number; title?: string }) {
   return row!.id;
 }
 
+async function seedBooking(listingId: string, checkIn: string, checkOut: string) {
+  await db.insert(bookings).values({ listingId, checkIn, checkOut });
+}
+
 afterEach(async () => {
+  const testListingIds = db
+    .select({ id: listings.id })
+    .from(listings)
+    .where(eq(listings.country, TEST_COUNTRY));
+  await db.delete(bookings).where(inArray(bookings.listingId, testListingIds));
   await db.delete(listings).where(eq(listings.country, TEST_COUNTRY));
 });
 
@@ -109,6 +118,55 @@ describe('GET /search', () => {
       'Listing 3',
       'Listing 4',
     ]);
+  });
+
+  it('returns 400 when only one of checkIn/checkOut is supplied', async () => {
+    const response = await request(app).get('/search').query({
+      lat: CENTER.lat,
+      lng: CENTER.lng,
+      radiusKm: 10,
+      checkIn: '2026-08-01',
+    });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('excludes a listing with a booking overlapping the requested dates and includes one without', async () => {
+    const bookedId = await seedListing({ distanceKm: 2, title: 'Booked' });
+    const freeId = await seedListing({ distanceKm: 3, title: 'Free' });
+    await seedBooking(bookedId, '2026-08-05', '2026-08-10');
+
+    const response = await request(app).get('/search').query({
+      lat: CENTER.lat,
+      lng: CENTER.lng,
+      radiusKm: 10,
+      country: TEST_COUNTRY,
+      checkIn: '2026-08-07',
+      checkOut: '2026-08-12',
+    });
+
+    expect(response.status).toBe(200);
+    const ids = response.body.results.map((result: { id: string }) => result.id);
+    expect(ids).not.toContain(bookedId);
+    expect(ids).toContain(freeId);
+  });
+
+  it('includes a listing whose existing booking checks out on the requested check-in date', async () => {
+    const listingId = await seedListing({ distanceKm: 2, title: 'Back to back' });
+    await seedBooking(listingId, '2026-08-01', '2026-08-05');
+
+    const response = await request(app).get('/search').query({
+      lat: CENTER.lat,
+      lng: CENTER.lng,
+      radiusKm: 10,
+      country: TEST_COUNTRY,
+      checkIn: '2026-08-05',
+      checkOut: '2026-08-08',
+    });
+
+    expect(response.status).toBe(200);
+    const ids = response.body.results.map((result: { id: string }) => result.id);
+    expect(ids).toContain(listingId);
   });
 });
 

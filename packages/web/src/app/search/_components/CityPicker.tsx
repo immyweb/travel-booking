@@ -13,13 +13,15 @@ import {
 type CityPickerProps = {
   cities: CityCentroid[];
   selectedCity: { city: string; country: string };
+  checkIn?: string;
+  checkOut?: string;
 };
 
 function cityKey(city: { city: string; country: string }) {
   return `${city.city}::${city.country}`;
 }
 
-export function CityPicker({ cities, selectedCity }: CityPickerProps) {
+export function CityPicker({ cities, selectedCity, checkIn, checkOut }: CityPickerProps) {
   const router = useRouter();
 
   return (
@@ -29,6 +31,10 @@ export function CityPicker({ cities, selectedCity }: CityPickerProps) {
         const selected = cities.find((city) => cityKey(city) === value);
         if (!selected) return;
         const params = new URLSearchParams({ city: selected.city, country: selected.country });
+        if (checkIn && checkOut) {
+          params.set('checkIn', checkIn);
+          params.set('checkOut', checkOut);
+        }
         router.push(`/search?${params.toString()}`);
       }}
     >

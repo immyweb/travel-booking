@@ -2,6 +2,7 @@ import { AMENITIES } from '@travel-booking/core';
 import { sql } from 'drizzle-orm';
 import {
   customType,
+  date,
   index,
   integer,
   pgEnum,
@@ -42,4 +43,20 @@ export const listings = pgTable(
     images: text('images').array().notNull(),
   },
   (table) => [index('listings_location_idx').using('gist', table.location)],
+);
+
+// Minimal shape Search needs to exclude unavailable listings — the Booking
+// feature's own spec extends this table (guest details, price, status, etc.)
+// with an additive migration rather than creating a new one.
+export const bookings = pgTable(
+  'bookings',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    listingId: uuid('listing_id')
+      .notNull()
+      .references(() => listings.id),
+    checkIn: date('check_in', { mode: 'string' }).notNull(),
+    checkOut: date('check_out', { mode: 'string' }).notNull(),
+  },
+  (table) => [index('bookings_listing_id_idx').on(table.listingId)],
 );
