@@ -1,6 +1,7 @@
 import type { Express } from 'express';
 import { createApp } from '../app';
-import { createDb, databaseUrlFromEnv, type Db } from '../db/db';
+import { configFromEnv } from '../config/config';
+import { createDb, type Db } from '../db/db';
 
 export type TestContext = {
   app: Express;
@@ -11,7 +12,7 @@ export type TestContext = {
 // composition rather than a parallel arrangement. Vitest runs each test file in
 // its own process (`pool: 'forks'`), so one connection per file is enough.
 export function createTestContext(): TestContext {
-  const db = createDb(databaseUrlFromEnv());
+  const db = createDb(configFromEnv().db.url);
 
   return { app: createApp({ db }), db };
 }

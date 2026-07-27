@@ -1,5 +1,6 @@
 import type { Amenity } from '@travel-booking/core';
-import { createDb, databaseUrlFromEnv, type Db } from '../src/db/db';
+import { configFromEnv } from '../src/config/config';
+import { createDb, type Db } from '../src/db/db';
 import { listings } from '../src/db/schema';
 
 type SeedListing = {
@@ -172,5 +173,5 @@ export async function seed(db: Db) {
 // Only runs when this file is the process entry point. Previously a top-level
 // await, so merely importing this module wiped the listings table.
 if (import.meta.main) {
-  await seed(createDb(databaseUrlFromEnv()));
+  await seed(createDb(configFromEnv().db.url));
 }
