@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import Link from 'next/link';
 
 export default function HomePage() {
   return (
@@ -7,7 +8,9 @@ export default function HomePage() {
       <Card>
         <CardContent className="flex flex-col items-center gap-4 p-8">
           <p className="text-lg text-foreground">Travel Booking</p>
-          <Button>Start searching</Button>
+          <Button>
+            <Link href="/search">Start searching</Link>
+          </Button>
         </CardContent>
       </Card>
     </main>
