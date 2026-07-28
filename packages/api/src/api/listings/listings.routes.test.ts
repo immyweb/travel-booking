@@ -1,7 +1,7 @@
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import request from 'supertest';
 import { afterEach, describe, expect, it } from 'vitest';
-import { listings } from '../../db/schema';
+import { bookings, listings } from '../../db/schema';
 import { createTestContext } from '../../test-support/context';
 
 const { app, db } = createTestContext();
@@ -30,7 +30,16 @@ async function seedListing() {
   return row!.id;
 }
 
+async function seedBooking(listingId: string, checkIn: string, checkOut: string) {
+  await db.insert(bookings).values({ listingId, checkIn, checkOut });
+}
+
 afterEach(async () => {
+  const testListingIds = db
+    .select({ id: listings.id })
+    .from(listings)
+    .where(eq(listings.country, TEST_COUNTRY));
+  await db.delete(bookings).where(inArray(bookings.listingId, testListingIds));
   await db.delete(listings).where(eq(listings.country, TEST_COUNTRY));
 });
 
@@ -67,6 +76,53 @@ describe('GET /listings/:id', () => {
 
   it('returns 400 for a malformed (non-UUID) id', async () => {
     const response = await request(app).get('/listings/not-a-uuid');
+
+    expect(response.status).toBe(400);
+  });
+
+  it('returns available: true with computed nights/totalPrice when the dates have no overlapping booking', async () => {
+    const id = await seedListing();
+
+    const response = await request(app)
+      .get(`/listings/${id}`)
+      .query({ checkIn: '2026-08-05', checkOut: '2026-08-10' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.availability).toEqual({
+      checkIn: '2026-08-05',
+      checkOut: '2026-08-10',
+      available: true,
+      nights: 5,
+      totalPrice: 410,
+    });
+  });
+
+  it('returns available: false when an existing booking overlaps the requested dates', async () => {
+    const id = await seedListing();
+    await seedBooking(id, '2026-08-07', '2026-08-12');
+
+    const response = await request(app)
+      .get(`/listings/${id}`)
+      .query({ checkIn: '2026-08-05', checkOut: '2026-08-10' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.availability).toMatchObject({ available: false });
+  });
+
+  it('returns 400 when only one of checkIn/checkOut is supplied', async () => {
+    const id = await seedListing();
+
+    const response = await request(app).get(`/listings/${id}`).query({ checkIn: '2026-08-05' });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('returns 400 when checkOut is not after checkIn', async () => {
+    const id = await seedListing();
+
+    const response = await request(app)
+      .get(`/listings/${id}`)
+      .query({ checkIn: '2026-08-10', checkOut: '2026-08-05' });
 
     expect(response.status).toBe(400);
   });

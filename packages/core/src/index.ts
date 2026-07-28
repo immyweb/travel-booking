@@ -90,11 +90,43 @@ export const SearchResponseSchema = z.object({
 });
 export type SearchResponse = z.infer<typeof SearchResponseSchema>;
 
+// Present only when the caller supplied both checkIn and checkOut to
+// GET /listings/:id — the same check-in-inclusive/check-out-exclusive
+// overlap rule Search applies against the `bookings` table decides `available`.
+export const AvailabilitySchema = z.object({
+  checkIn: z.iso.date(),
+  checkOut: z.iso.date(),
+  available: z.boolean(),
+  nights: z.number(),
+  totalPrice: z.number(),
+});
+export type Availability = z.infer<typeof AvailabilitySchema>;
+
+// GET /listings/:id's optional query params: checkIn/checkOut must be
+// supplied together, mirroring SearchQuerySchema's own refine — a lone
+// in-progress date is a client mistake (400), not a partial filter.
+export const ListingQuerySchema = z
+  .object({
+    checkIn: z.iso.date().optional(),
+    checkOut: z.iso.date().optional(),
+  })
+  .refine((query) => (query.checkIn === undefined) === (query.checkOut === undefined), {
+    message: 'checkIn and checkOut must be supplied together',
+    path: ['checkIn'],
+  })
+  // ISO date strings compare lexicographically the same as chronologically —
+  // without this, a reversed range would silently produce a negative
+  // nights/totalPrice rather than being rejected as the client mistake it is.
+  .refine((query) => !query.checkIn || !query.checkOut || query.checkOut > query.checkIn, {
+    message: 'checkOut must be after checkIn',
+    path: ['checkOut'],
+  });
+export type ListingQuery = z.infer<typeof ListingQuerySchema>;
+
 // The full single-listing read (`GET /listings/:id`) — distinct from
 // ListingSummarySchema's search-result row, which carries `distanceKm`
-// instead of the fields only a detail view needs. `availability` is always
-// `null` for this slice; date-based availability is a separate, later
-// extension of this same shape.
+// instead of the fields only a detail view needs. `availability` is `null`
+// unless the caller supplied checkIn/checkOut.
 export const ListingDetailSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -106,7 +138,7 @@ export const ListingDetailSchema = z.object({
   city: z.string(),
   country: z.string(),
   coordinates: CoordinatesSchema,
-  availability: z.null(),
+  availability: AvailabilitySchema.nullable(),
 });
 export type ListingDetail = z.infer<typeof ListingDetailSchema>;
 

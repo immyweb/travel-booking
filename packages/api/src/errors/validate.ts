@@ -38,3 +38,31 @@ export function validateParams<Schema extends ZodType>(
     await handler(parsed.data, req, res);
   };
 }
+
+// For routes that need both — e.g. GET /listings/:id, where the id is a path
+// param and checkIn/checkOut are query params. A single pass so a bad path
+// param 400s before a bad query param is even parsed.
+export function validateParamsAndQuery<ParamsSchema extends ZodType, QuerySchema extends ZodType>(
+  paramsSchema: ParamsSchema,
+  querySchema: QuerySchema,
+  handler: (
+    params: z.output<ParamsSchema>,
+    query: z.output<QuerySchema>,
+    req: Request,
+    res: Response,
+  ) => Promise<void> | void,
+): RequestHandler {
+  return async (req, res) => {
+    const parsedParams = paramsSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+      throw new ApiError(400, 'Invalid path parameters', z.flattenError(parsedParams.error));
+    }
+
+    const parsedQuery = querySchema.safeParse(req.query);
+    if (!parsedQuery.success) {
+      throw new ApiError(400, 'Invalid query parameters', z.flattenError(parsedQuery.error));
+    }
+
+    await handler(parsedParams.data, parsedQuery.data, req, res);
+  };
+}

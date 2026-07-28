@@ -39,7 +39,11 @@ export function SearchResultsSection({
 
   return (
     <>
-      {results.length === 0 ? <EmptyState /> : <SearchResults results={results} />}
+      {results.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <SearchResults results={results} checkIn={checkIn} checkOut={checkOut} guests={guests} />
+      )}
 
       {pagination.totalPages > 1 && (
         <nav

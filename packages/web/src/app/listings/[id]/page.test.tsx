@@ -41,7 +41,10 @@ beforeEach(() => {
 
 describe('ListingDetailPage', () => {
   it("renders the listing's title, price, currency, city, country and guest capacity", async () => {
-    const ui = await ListingDetailPage({ params: Promise.resolve({ id: MOCK_LISTING.id }) });
+    const ui = await ListingDetailPage({
+      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      searchParams: Promise.resolve({}),
+    });
     render(ui);
 
     expect(screen.getByRole('heading', { name: MOCK_LISTING.title })).toBeInTheDocument();
@@ -51,7 +54,10 @@ describe('ListingDetailPage', () => {
   });
 
   it('renders the full amenity list using the shared amenity label formatting', async () => {
-    const ui = await ListingDetailPage({ params: Promise.resolve({ id: MOCK_LISTING.id }) });
+    const ui = await ListingDetailPage({
+      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      searchParams: Promise.resolve({}),
+    });
     render(ui);
 
     expect(screen.getByText('Wifi')).toBeInTheDocument();
@@ -59,7 +65,10 @@ describe('ListingDetailPage', () => {
   });
 
   it('renders one carousel image per photo, each with distinguishing alt text', async () => {
-    const ui = await ListingDetailPage({ params: Promise.resolve({ id: MOCK_LISTING.id }) });
+    const ui = await ListingDetailPage({
+      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      searchParams: Promise.resolve({}),
+    });
     render(ui);
 
     const images = screen.getAllByRole('img');
@@ -72,10 +81,75 @@ describe('ListingDetailPage', () => {
     vi.mocked(fetchListing).mockResolvedValue(null);
 
     await expect(
-      ListingDetailPage({ params: Promise.resolve({ id: 'unknown-id' }) }),
+      ListingDetailPage({
+        params: Promise.resolve({ id: 'unknown-id' }),
+        searchParams: Promise.resolve({}),
+      }),
     ).rejects.toThrow();
 
     expect(notFoundMock).toHaveBeenCalled();
+  });
+
+  it('shows no availability section and an enabled Book now when no dates are in the URL', async () => {
+    const ui = await ListingDetailPage({
+      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      searchParams: Promise.resolve({}),
+    });
+    render(ui);
+
+    expect(screen.queryByText('Not available for these dates')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Book now' })).toBeInTheDocument();
+  });
+
+  it('shows the dates, nights and total price, and an enabled Book now, when available for the requested dates', async () => {
+    vi.mocked(fetchListing).mockResolvedValue({
+      ...MOCK_LISTING,
+      availability: {
+        checkIn: '2026-08-05',
+        checkOut: '2026-08-10',
+        available: true,
+        nights: 5,
+        totalPrice: 410,
+      },
+    });
+
+    const ui = await ListingDetailPage({
+      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      searchParams: Promise.resolve({ checkIn: '2026-08-05', checkOut: '2026-08-10' }),
+    });
+    render(ui);
+
+    expect(screen.getByText('2026-08-05', { exact: false })).toBeInTheDocument();
+    expect(screen.getByText('5 nights', { exact: false })).toBeInTheDocument();
+    expect(screen.getByText('410 EUR total')).toBeInTheDocument();
+    const bookLink = screen.getByRole('link', { name: 'Book now' });
+    expect(bookLink).toHaveAttribute(
+      'href',
+      '/listings/listing-1/book?checkIn=2026-08-05&checkOut=2026-08-10',
+    );
+  });
+
+  it('shows an unavailable message and a disabled Book now when booked for the requested dates', async () => {
+    vi.mocked(fetchListing).mockResolvedValue({
+      ...MOCK_LISTING,
+      availability: {
+        checkIn: '2026-08-05',
+        checkOut: '2026-08-10',
+        available: false,
+        nights: 5,
+        totalPrice: 410,
+      },
+    });
+
+    const ui = await ListingDetailPage({
+      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      searchParams: Promise.resolve({ checkIn: '2026-08-05', checkOut: '2026-08-10' }),
+    });
+    render(ui);
+
+    expect(screen.getByText('Not available for these dates')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Book now' })).toBeDisabled();
+    expect(screen.queryByRole('link', { name: 'Book now' })).not.toBeInTheDocument();
   });
 });
 
@@ -83,6 +157,7 @@ describe('generateMetadata', () => {
   it("sets the page title to the listing's title", async () => {
     const metadata = await generateMetadata({
       params: Promise.resolve({ id: MOCK_LISTING.id }),
+      searchParams: Promise.resolve({}),
     });
 
     expect(metadata.title).toBe(MOCK_LISTING.title);
@@ -93,7 +168,10 @@ describe('generateMetadata', () => {
     vi.mocked(fetchListing).mockResolvedValue(null);
 
     await expect(
-      generateMetadata({ params: Promise.resolve({ id: 'unknown-id' }) }),
+      generateMetadata({
+        params: Promise.resolve({ id: 'unknown-id' }),
+        searchParams: Promise.resolve({}),
+      }),
     ).rejects.toThrow();
 
     expect(notFoundMock).toHaveBeenCalled();

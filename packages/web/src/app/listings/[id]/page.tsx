@@ -1,11 +1,14 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Button } from '@/components/ui/button';
 import { fetchListing } from '@/lib/api';
-import { amenityLabel } from '@/lib/utils';
+import { amenityLabel, carryDatesAndGuests } from '@/lib/utils';
 import { ListingGallery } from './_components/ListingGallery';
 
 type ListingDetailPageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ checkIn?: string; checkOut?: string; guests?: string }>;
 };
 
 export async function generateMetadata({ params }: ListingDetailPageProps): Promise<Metadata> {
@@ -21,13 +24,32 @@ export async function generateMetadata({ params }: ListingDetailPageProps): Prom
   };
 }
 
-export default async function ListingDetailPage({ params }: ListingDetailPageProps) {
+export default async function ListingDetailPage({ params, searchParams }: ListingDetailPageProps) {
   const { id } = await params;
-  const listing = await fetchListing(id);
+  const { checkIn, checkOut, guests } = await searchParams;
+
+  // Dates are only meaningful (and only valid per the API's Zod schema) when
+  // supplied together, mirroring how Search treats a lone in-progress
+  // selection as no filter at all.
+  const hasDateRange = Boolean(checkIn && checkOut);
+  const listing = await fetchListing(
+    id,
+    hasDateRange ? { checkIn: checkIn!, checkOut: checkOut! } : undefined,
+  );
 
   if (!listing) {
     notFound();
   }
+
+  const { availability } = listing;
+  // No dates chosen (a bookmarked/shared link) is treated the same as
+  // available: nothing here blocks the guest from starting a booking.
+  const canBook = availability === null || availability.available;
+
+  // The booking flow itself is separate, not-yet-built work — this carries
+  // the guest's dates/guest count forward the same way Search's own links do,
+  // so whatever's built next doesn't have to re-collect them.
+  const bookHref = `/listings/${listing.id}/book${carryDatesAndGuests({ checkIn, checkOut, guests })}`;
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-4">
@@ -43,6 +65,32 @@ export default async function ListingDetailPage({ params }: ListingDetailPagePro
           <span className="text-sm font-normal text-muted-foreground">/ night</span>
         </p>
         <p className="text-sm text-muted-foreground">Sleeps up to {listing.maxGuests} guests</p>
+      </div>
+
+      {availability && (
+        <div className="flex flex-col gap-1 rounded-lg border border-border p-4">
+          <p className="text-sm text-muted-foreground">
+            {availability.checkIn} – {availability.checkOut} · {availability.nights} night
+            {availability.nights === 1 ? '' : 's'}
+          </p>
+          {availability.available ? (
+            <p className="text-lg font-semibold">
+              {availability.totalPrice} {listing.currency} total
+            </p>
+          ) : (
+            <p className="text-sm font-medium text-destructive">Not available for these dates</p>
+          )}
+        </div>
+      )}
+
+      <div>
+        {canBook ? (
+          <Button asChild>
+            <Link href={bookHref}>Book now</Link>
+          </Button>
+        ) : (
+          <Button disabled>Book now</Button>
+        )}
       </div>
 
       <div className="flex flex-col gap-2">

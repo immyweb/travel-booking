@@ -3,6 +3,7 @@
 // separate slice with its own queries.
 import type { CityCentroid, ListingSummary, SearchQuery } from '@travel-booking/core';
 import { and, arrayContains, eq, gte, sql } from 'drizzle-orm';
+import { bookingOverlapsRange } from '../../db/booking-overlap';
 import type { Db } from '../../db/db';
 import { bookings, listings } from '../../db/schema';
 
@@ -30,14 +31,10 @@ export async function searchListings(db: Db, query: SearchQuery): Promise<Search
     conditions.push(arrayContains(listings.amenities, amenities));
   }
   if (checkIn && checkOut) {
-    // Check-in inclusive, check-out exclusive: an existing booking blocks the
-    // requested range only if it truly overlaps, so a checkout on day X
-    // doesn't block a new check-in on day X.
     conditions.push(sql`NOT EXISTS (
       SELECT 1 FROM ${bookings}
       WHERE ${bookings.listingId} = ${listings.id}
-        AND ${bookings.checkIn} < ${checkOut}
-        AND ${bookings.checkOut} > ${checkIn}
+        AND ${bookingOverlapsRange(checkIn, checkOut)}
     )`);
   }
   const where = and(...conditions);

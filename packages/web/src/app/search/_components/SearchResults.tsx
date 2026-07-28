@@ -5,9 +5,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import { carryDatesAndGuests } from '@/lib/utils';
 
 type SearchResultsProps = {
   results: ListingSummary[];
+  checkIn?: string;
+  checkOut?: string;
+  guests?: number;
 };
 
 type MapPosition = { left: string; top: string };
@@ -35,9 +39,16 @@ function placeOnMap(results: ListingSummary[]): Record<string, MapPosition> {
   return positions;
 }
 
-export function SearchResults({ results }: SearchResultsProps) {
+export function SearchResults({ results, checkIn, checkOut, guests }: SearchResultsProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const positions = useMemo(() => placeOnMap(results), [results]);
+
+  // Carries the guest's selected dates/guest count forward from Search so the
+  // Listing Detail page can reflect them (same params Search's own filter
+  // links already thread through).
+  function listingHref(id: string) {
+    return `/listings/${id}${carryDatesAndGuests({ checkIn, checkOut, guests })}`;
+  }
 
   return (
     <div className="flex flex-1 overflow-hidden">
@@ -49,7 +60,7 @@ export function SearchResults({ results }: SearchResultsProps) {
             onMouseLeave={() => setActiveId((id) => (id === listing.id ? null : id))}
           >
             <Link
-              href={`/listings/${listing.id}`}
+              href={listingHref(listing.id)}
               target="_blank"
               className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >

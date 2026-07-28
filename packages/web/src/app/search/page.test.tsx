@@ -71,6 +71,38 @@ describe('SearchPage', () => {
     }
   });
 
+  it('links each result to its listing page with no query params when no dates/guests are selected', async () => {
+    const ui = await SearchPage({ searchParams: Promise.resolve({}) });
+    await act(async () => {
+      render(ui);
+    });
+
+    expect(screen.getByRole('link', { name: /Sunny Alfama studio/ })).toHaveAttribute(
+      'href',
+      '/listings/listing-1',
+    );
+  });
+
+  it("carries the selected dates and guest count into each result's listing link", async () => {
+    const ui = await SearchPage({
+      searchParams: Promise.resolve({
+        city: 'Paris',
+        country: 'France',
+        checkIn: '2026-08-05',
+        checkOut: '2026-08-10',
+        guests: '4',
+      }),
+    });
+    await act(async () => {
+      render(ui);
+    });
+
+    expect(screen.getByRole('link', { name: /Sunny Alfama studio/ })).toHaveAttribute(
+      'href',
+      '/listings/listing-1?checkIn=2026-08-05&checkOut=2026-08-10&guests=4',
+    );
+  });
+
   it('renders the empty state when no listings match', async () => {
     vi.mocked(fetchSearchResults).mockResolvedValue(EMPTY_SEARCH_RESPONSE);
 

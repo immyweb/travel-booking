@@ -183,4 +183,23 @@ describe('fetchListing', () => {
 
     await expect(fetchListing(LISTING.id)).rejects.toThrow();
   });
+
+  it('appends checkIn/checkOut as query params when dates are supplied', async () => {
+    fetchMock.mockResolvedValue(stubResponse(LISTING));
+
+    await fetchListing(LISTING.id, { checkIn: '2026-08-05', checkOut: '2026-08-10' });
+
+    expect(Object.fromEntries(requestedUrl().searchParams)).toEqual({
+      checkIn: '2026-08-05',
+      checkOut: '2026-08-10',
+    });
+  });
+
+  it('omits the query string entirely when no dates are supplied', async () => {
+    fetchMock.mockResolvedValue(stubResponse(LISTING));
+
+    await fetchListing(LISTING.id);
+
+    expect(requestedUrl().search).toBe('');
+  });
 });
