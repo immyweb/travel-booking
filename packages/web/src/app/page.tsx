@@ -8,7 +8,7 @@ export default function HomePage() {
       <Card>
         <CardContent className="flex flex-col items-center gap-4 p-8">
           <p className="text-lg text-foreground">Travel Booking</p>
-          <Button>
+          <Button asChild>
             <Link href="/search">Start searching</Link>
           </Button>
         </CardContent>
