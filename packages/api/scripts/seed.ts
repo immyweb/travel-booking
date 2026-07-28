@@ -16,7 +16,15 @@ type SeedListing = {
   images: string[];
 };
 
-const PLACEHOLDER_IMAGE = 'https://images.travel-booking.example/listing.jpg';
+// Lorem Picsum: real stock photos, no API key, deterministic per seed string —
+// reliable imagery for curated seed data (replaces the old
+// images.travel-booking.example placeholder, which never resolved to anything).
+function picsumImages(seedPrefix: string, count: number): string[] {
+  return Array.from(
+    { length: count },
+    (_, index) => `https://picsum.photos/seed/${seedPrefix}-${index + 1}/1200/800`,
+  );
+}
 
 // Curated (seed-only) supply spanning multiple cities/countries, so search
 // radius and centroid resolution have real, varied data to work against.
@@ -31,7 +39,7 @@ const SEED_LISTINGS: SeedListing[] = [
     country: 'Portugal',
     latitude: 38.7127,
     longitude: -9.1288,
-    images: [PLACEHOLDER_IMAGE],
+    images: picsumImages('alfama-studio', 3),
   },
   {
     title: 'Belém riverside loft',
@@ -43,7 +51,7 @@ const SEED_LISTINGS: SeedListing[] = [
     country: 'Portugal',
     latitude: 38.6971,
     longitude: -9.2033,
-    images: [PLACEHOLDER_IMAGE],
+    images: picsumImages('belem-loft', 2),
   },
   {
     title: 'Príncipe Real townhouse',
@@ -55,7 +63,7 @@ const SEED_LISTINGS: SeedListing[] = [
     country: 'Portugal',
     latitude: 38.7183,
     longitude: -9.1502,
-    images: [PLACEHOLDER_IMAGE],
+    images: picsumImages('principe-real-townhouse', 4),
   },
   {
     title: 'Chiado penthouse',
@@ -67,7 +75,9 @@ const SEED_LISTINGS: SeedListing[] = [
     country: 'Portugal',
     latitude: 38.7107,
     longitude: -9.1425,
-    images: [PLACEHOLDER_IMAGE],
+    // Single-image edge case — the gallery/carousel should still render
+    // cleanly with no prev/next controls when there's nothing to page through.
+    images: picsumImages('chiado-penthouse', 1),
   },
   {
     title: 'Graça hillside flat',
@@ -79,7 +89,7 @@ const SEED_LISTINGS: SeedListing[] = [
     country: 'Portugal',
     latitude: 38.7159,
     longitude: -9.1289,
-    images: [PLACEHOLDER_IMAGE],
+    images: picsumImages('graca-flat', 2),
   },
   {
     title: 'Baixa boutique room',
@@ -91,7 +101,7 @@ const SEED_LISTINGS: SeedListing[] = [
     country: 'Portugal',
     latitude: 38.7092,
     longitude: -9.1364,
-    images: [PLACEHOLDER_IMAGE],
+    images: picsumImages('baixa-room', 1),
   },
   {
     title: 'Cascais beach cottage',
@@ -103,7 +113,7 @@ const SEED_LISTINGS: SeedListing[] = [
     country: 'Portugal',
     latitude: 38.6979,
     longitude: -9.4215,
-    images: [PLACEHOLDER_IMAGE],
+    images: picsumImages('cascais-cottage', 3),
   },
   {
     title: 'Sintra forest cabin',
@@ -115,7 +125,7 @@ const SEED_LISTINGS: SeedListing[] = [
     country: 'Portugal',
     latitude: 38.8029,
     longitude: -9.3817,
-    images: [PLACEHOLDER_IMAGE],
+    images: picsumImages('sintra-cabin', 2),
   },
   {
     title: 'Le Marais loft',
@@ -127,7 +137,7 @@ const SEED_LISTINGS: SeedListing[] = [
     country: 'France',
     latitude: 48.8606,
     longitude: 2.3622,
-    images: [PLACEHOLDER_IMAGE],
+    images: picsumImages('marais-loft', 4),
   },
   {
     title: 'Montmartre artist studio',
@@ -139,7 +149,7 @@ const SEED_LISTINGS: SeedListing[] = [
     country: 'France',
     latitude: 48.8867,
     longitude: 2.3431,
-    images: [PLACEHOLDER_IMAGE],
+    images: picsumImages('montmartre-studio', 2),
   },
   {
     title: 'Latin Quarter pied-à-terre',
@@ -151,7 +161,7 @@ const SEED_LISTINGS: SeedListing[] = [
     country: 'France',
     latitude: 48.8462,
     longitude: 2.3459,
-    images: [PLACEHOLDER_IMAGE],
+    images: picsumImages('latin-quarter', 3),
   },
 ];
 
