@@ -112,3 +112,19 @@ export async function createBooking(input: CreateBooking): Promise<CreateBooking
 
   return { ok: true, booking: BookingSchema.parse(await response.json()) };
 }
+
+// A booking confirmation link has no auth/ownership check (email is the only
+// record — see #19), so a malformed id and an unknown-but-well-formed one
+// both need to render the same not-found page rather than leaking the 400/404
+// distinction the api makes between them.
+export async function fetchBooking(id: string): Promise<Booking | null> {
+  const response = await fetch(`${API_URL}/bookings/${id}`, { cache: 'no-store' });
+  if (response.status === 404 || response.status === 400) {
+    return null;
+  }
+  if (!response.ok) {
+    await failed('GET /bookings/:id', response);
+  }
+
+  return BookingSchema.parse(await response.json());
+}

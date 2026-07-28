@@ -6,7 +6,13 @@ import type {
   SearchResponse,
 } from '@travel-booking/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createBooking, fetchCities, fetchListing, fetchSearchResults } from '@/lib/api';
+import {
+  createBooking,
+  fetchBooking,
+  fetchCities,
+  fetchListing,
+  fetchSearchResults,
+} from '@/lib/api';
 
 const fetchMock = vi.fn();
 
@@ -298,5 +304,45 @@ describe('createBooking', () => {
     fetchMock.mockResolvedValue(stubResponse({ id: BOOKING.id }, { status: 201 }));
 
     await expect(createBooking(CREATE_BOOKING)).rejects.toThrow();
+  });
+});
+
+describe('fetchBooking', () => {
+  it('returns the parsed booking', async () => {
+    fetchMock.mockResolvedValue(stubResponse(BOOKING));
+
+    await expect(fetchBooking(BOOKING.id)).resolves.toEqual(BOOKING);
+  });
+
+  it('returns null for a 404, rather than throwing', async () => {
+    fetchMock.mockResolvedValue(
+      stubResponse({ error: { message: 'Booking not found' } }, { status: 404 }),
+    );
+
+    await expect(fetchBooking('unknown-id')).resolves.toBeNull();
+  });
+
+  it('returns null for a 400 (a malformed id), the same as an unknown one', async () => {
+    fetchMock.mockResolvedValue(
+      stubResponse({ error: { message: 'Invalid params' } }, { status: 400 }),
+    );
+
+    await expect(fetchBooking('not-a-uuid')).resolves.toBeNull();
+  });
+
+  it('surfaces the message from the api error envelope for a non-400/404 failure', async () => {
+    fetchMock.mockResolvedValue(
+      stubResponse({ error: { message: 'Internal Server Error' } }, { status: 500 }),
+    );
+
+    await expect(fetchBooking(BOOKING.id)).rejects.toThrow(
+      'GET /bookings/:id failed with status 500: Internal Server Error',
+    );
+  });
+
+  it('rejects a payload that does not match the contract', async () => {
+    fetchMock.mockResolvedValue(stubResponse({ id: BOOKING.id }));
+
+    await expect(fetchBooking(BOOKING.id)).rejects.toThrow();
   });
 });
