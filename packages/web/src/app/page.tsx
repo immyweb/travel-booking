@@ -7,7 +7,7 @@ export default function HomePage() {
     <main className="flex flex-1 items-center justify-center p-8">
       <Card>
         <CardContent className="flex flex-col items-center gap-4 p-8">
-          <p className="text-lg text-foreground">Travel Booking</p>
+          <h1 className="text-lg text-foreground">Travel Booking</h1>
           <Button asChild>
             <Link href="/search">Start searching</Link>
           </Button>

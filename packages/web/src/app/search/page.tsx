@@ -91,6 +91,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   return (
     <main className="flex flex-1 flex-col">
+      <h1 className="sr-only">Search stays</h1>
       <div className="flex items-end gap-3 border-b border-border p-4">
         <CityPicker
           cities={cities}
