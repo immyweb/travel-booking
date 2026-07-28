@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CreateBookingSchema, type CreateBooking } from '@travel-booking/core';
-import { useActionState, useMemo } from 'react';
+import { startTransition, useActionState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,8 +60,13 @@ export function BookingForm({ listingId, maxGuests, checkIn, checkOut, guests }:
   // useActionState's dispatcher isn't only for <form action>: it can be
   // invoked directly with whatever argument the action expects, which is how
   // a React Hook Form-validated submit hands off to the Server Action here.
+  // Bypassing the action/formAction prop also means React no longer wraps
+  // the dispatch in a transition automatically, so startTransition is
+  // required here to keep `pending` updating correctly.
   function onValid(values: CreateBooking) {
-    formAction(values);
+    startTransition(() => {
+      formAction(values);
+    });
   }
 
   const fieldError = FIELD_ORDER.map((field) => errors[field]?.message).find(Boolean);
