@@ -176,4 +176,16 @@ describe('generateMetadata', () => {
 
     expect(notFoundMock).toHaveBeenCalled();
   });
+
+  it('fetches with the same dates as the page, so Next.js can dedupe the two calls into one request', async () => {
+    await generateMetadata({
+      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      searchParams: Promise.resolve({ checkIn: '2026-08-05', checkOut: '2026-08-10' }),
+    });
+
+    expect(fetchListing).toHaveBeenCalledWith(MOCK_LISTING.id, {
+      checkIn: '2026-08-05',
+      checkOut: '2026-08-10',
+    });
+  });
 });

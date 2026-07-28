@@ -11,9 +11,17 @@ type ListingDetailPageProps = {
   searchParams: Promise<{ checkIn?: string; checkOut?: string; guests?: string }>;
 };
 
-export async function generateMetadata({ params }: ListingDetailPageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: ListingDetailPageProps): Promise<Metadata> {
   const { id } = await params;
-  const listing = await fetchListing(id);
+  const { checkIn, checkOut } = await searchParams;
+
+  // Same URL as the page component's own fetchListing call below (when dates
+  // are present) — Next.js memoizes identical GET fetches within a render
+  // pass, so this avoids a second round trip to the API for the same listing.
+  const listing = await fetchListing(id, checkIn && checkOut ? { checkIn, checkOut } : undefined);
   if (!listing) {
     notFound();
   }
