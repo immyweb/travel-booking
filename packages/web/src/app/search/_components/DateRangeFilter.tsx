@@ -4,6 +4,7 @@ import type { Amenity } from '@travel-booking/core';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { searchHref } from '@/lib/utils';
 
 type DateRangeFilterProps = {
   city: { city: string; country: string };
@@ -23,12 +24,9 @@ export function DateRangeFilter({
   const router = useRouter();
 
   function pushDates(nextCheckIn: string | undefined, nextCheckOut: string | undefined) {
-    const params = new URLSearchParams({ city: city.city, country: city.country });
-    if (nextCheckIn) params.set('checkIn', nextCheckIn);
-    if (nextCheckOut) params.set('checkOut', nextCheckOut);
-    if (guests) params.set('guests', guests);
-    for (const amenity of amenities ?? []) params.append('amenities', amenity);
-    router.push(`/search?${params.toString()}`);
+    router.push(
+      searchHref({ city, checkIn: nextCheckIn, checkOut: nextCheckOut, guests, amenities }),
+    );
   }
 
   return (

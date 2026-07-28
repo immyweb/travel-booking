@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { searchHref } from '@/lib/utils';
 
 type CityPickerProps = {
   cities: CityCentroid[];
@@ -42,14 +43,15 @@ export function CityPicker({
         onValueChange={(value) => {
           const selected = cities.find((city) => cityKey(city) === value);
           if (!selected) return;
-          const params = new URLSearchParams({ city: selected.city, country: selected.country });
-          if (checkIn && checkOut) {
-            params.set('checkIn', checkIn);
-            params.set('checkOut', checkOut);
-          }
-          if (guests) params.set('guests', guests);
-          for (const amenity of amenities ?? []) params.append('amenities', amenity);
-          router.push(`/search?${params.toString()}`);
+          router.push(
+            searchHref({
+              city: { city: selected.city, country: selected.country },
+              checkIn,
+              checkOut,
+              guests,
+              amenities,
+            }),
+          );
         }}
       >
         <SelectTrigger id="city-picker" className="w-56">

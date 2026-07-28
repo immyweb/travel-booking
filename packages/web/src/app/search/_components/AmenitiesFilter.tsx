@@ -10,7 +10,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { amenityLabel } from '@/lib/utils';
+import { amenityLabel, searchHref } from '@/lib/utils';
 
 type AmenitiesFilterProps = {
   city: { city: string; country: string };
@@ -34,12 +34,7 @@ export function AmenitiesFilter({
       ? [...amenities, amenity]
       : amenities.filter((selected) => selected !== amenity);
 
-    const params = new URLSearchParams({ city: city.city, country: city.country });
-    if (checkIn) params.set('checkIn', checkIn);
-    if (checkOut) params.set('checkOut', checkOut);
-    if (guests) params.set('guests', guests);
-    for (const nextAmenity of nextAmenities) params.append('amenities', nextAmenity);
-    router.push(`/search?${params.toString()}`);
+    router.push(searchHref({ city, checkIn, checkOut, guests, amenities: nextAmenities }));
   }
 
   return (

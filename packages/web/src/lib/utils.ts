@@ -32,3 +32,24 @@ export function carryDatesAndGuests(selection: {
   const query = params.toString();
   return query ? `?${query}` : '';
 }
+
+// Shared by Search's city, date, guest count, and amenities filters — each
+// navigates to /search with the full filter selection, only one field of
+// which it's actually changing itself.
+export function searchHref(selection: {
+  city: { city: string; country: string };
+  checkIn?: string;
+  checkOut?: string;
+  guests?: string;
+  amenities?: Amenity[];
+}): string {
+  const params = new URLSearchParams({
+    city: selection.city.city,
+    country: selection.city.country,
+  });
+  if (selection.checkIn) params.set('checkIn', selection.checkIn);
+  if (selection.checkOut) params.set('checkOut', selection.checkOut);
+  if (selection.guests) params.set('guests', selection.guests);
+  for (const amenity of selection.amenities ?? []) params.append('amenities', amenity);
+  return `/search?${params.toString()}`;
+}
