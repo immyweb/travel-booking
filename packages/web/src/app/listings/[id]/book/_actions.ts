@@ -1,22 +1,23 @@
 'use server';
 
-import { CreateBookingSchema } from '@travel-booking/core';
+import { CreateBookingSchema, type CreateBooking } from '@travel-booking/core';
 import { redirect } from 'next/navigation';
 import { createBooking } from '@/lib/api';
-import { bookingFieldsFromFormData } from './_bookingFields';
 
 export type BookingFormState = { error: string } | null;
 
-// Re-validates with the same schema the client already checked against —
-// FormData is untrusted input regardless of what the UI enforced (see the
-// Next.js Server Actions security guidance) — then defers to the api's own
+// The form is React Hook Form-managed and already validates against this
+// same schema client-side, but a Server Action is a reachable POST endpoint
+// regardless of what any particular UI enforces — see the Next.js Server
+// Actions security guidance — so the input is re-validated here rather than
+// trusted as already-shaped. Beyond that, this defers to the api's own
 // authoritative checks (listing existence, maxGuests, the #16 EXCLUDE
 // constraint) via createBooking.
 export async function submitBooking(
   _prevState: BookingFormState,
-  formData: FormData,
+  input: CreateBooking,
 ): Promise<BookingFormState> {
-  const parsed = CreateBookingSchema.safeParse(bookingFieldsFromFormData(formData));
+  const parsed = CreateBookingSchema.safeParse(input);
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Please check the booking details.' };

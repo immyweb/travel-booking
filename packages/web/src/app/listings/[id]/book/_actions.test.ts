@@ -1,4 +1,4 @@
-import type { Booking } from '@travel-booking/core';
+import type { Booking, CreateBooking } from '@travel-booking/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createBooking } from '@/lib/api';
 import { submitBooking } from './_actions';
@@ -16,26 +16,18 @@ vi.mock('next/navigation', () => ({
   redirect: (path: string) => redirectMock(path),
 }));
 
-const VALID_FORM_DATA = {
+const VALID_INPUT: CreateBooking = {
   listingId: '11111111-1111-4111-8111-111111111111',
   checkIn: '2026-08-05',
   checkOut: '2026-08-10',
-  guests: '2',
+  guests: 2,
   guestName: 'Jane Doe',
   guestEmail: 'jane@example.com',
 };
 
-function formDataFrom(fields: Record<string, string>): FormData {
-  const formData = new FormData();
-  for (const [key, value] of Object.entries(fields)) {
-    formData.set(key, value);
-  }
-  return formData;
-}
-
 const BOOKING: Booking = {
   id: 'booking-1',
-  listingId: VALID_FORM_DATA.listingId,
+  listingId: VALID_INPUT.listingId,
   checkIn: '2026-08-05',
   checkOut: '2026-08-10',
   guests: 2,
@@ -53,22 +45,18 @@ beforeEach(() => {
 
 describe('submitBooking', () => {
   it('returns a validation error without calling createBooking when a field is missing', async () => {
-    const formData = formDataFrom({ ...VALID_FORM_DATA, guestName: '' });
-
-    const state = await submitBooking(null, formData);
+    const state = await submitBooking(null, { ...VALID_INPUT, guestName: '' });
 
     expect(state?.error).toBeTruthy();
     expect(createBooking).not.toHaveBeenCalled();
   });
 
   it('returns a validation error for reversed dates without calling createBooking', async () => {
-    const formData = formDataFrom({
-      ...VALID_FORM_DATA,
+    const state = await submitBooking(null, {
+      ...VALID_INPUT,
       checkIn: '2026-08-10',
       checkOut: '2026-08-05',
     });
-
-    const state = await submitBooking(null, formData);
 
     expect(state?.error).toBeTruthy();
     expect(createBooking).not.toHaveBeenCalled();
@@ -76,18 +64,16 @@ describe('submitBooking', () => {
 
   it('redirects to the new booking on success', async () => {
     vi.mocked(createBooking).mockResolvedValue({ ok: true, booking: BOOKING });
-    const formData = formDataFrom(VALID_FORM_DATA);
 
-    await expect(submitBooking(null, formData)).rejects.toThrow('NEXT_REDIRECT');
+    await expect(submitBooking(null, VALID_INPUT)).rejects.toThrow('NEXT_REDIRECT');
 
     expect(redirectMock).toHaveBeenCalledWith(`/bookings/${BOOKING.id}`);
   });
 
   it('returns an inline error and does not redirect on a conflict', async () => {
     vi.mocked(createBooking).mockResolvedValue({ ok: false, reason: 'conflict' });
-    const formData = formDataFrom(VALID_FORM_DATA);
 
-    const state = await submitBooking(null, formData);
+    const state = await submitBooking(null, VALID_INPUT);
 
     expect(state?.error).toMatch(/no longer available/i);
     expect(redirectMock).not.toHaveBeenCalled();
@@ -99,9 +85,8 @@ describe('submitBooking', () => {
       reason: 'invalid',
       message: "guests exceeds this listing's maxGuests (4)",
     });
-    const formData = formDataFrom(VALID_FORM_DATA);
 
-    const state = await submitBooking(null, formData);
+    const state = await submitBooking(null, VALID_INPUT);
 
     expect(state?.error).toBe("guests exceeds this listing's maxGuests (4)");
     expect(redirectMock).not.toHaveBeenCalled();

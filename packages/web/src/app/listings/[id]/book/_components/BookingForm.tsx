@@ -1,11 +1,12 @@
 'use client';
 
-import { CreateBookingSchema } from '@travel-booking/core';
-import { useActionState, useState, type FormEvent } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { CreateBookingSchema, type CreateBooking } from '@travel-booking/core';
+import { useActionState, useMemo } from 'react';
+import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { bookingFieldsFromFormData } from '../_bookingFields';
 import { submitBooking, type BookingFormState } from '../_actions';
 
 type BookingFormProps = {
@@ -18,56 +19,75 @@ type BookingFormProps = {
 
 const initialState: BookingFormState = null;
 
+// Priority order for showing one error at a time — matches the fields'
+// top-to-bottom order in the form below. Includes listingId (hidden, not
+// user-editable) so a bad route param still surfaces instead of silently
+// blocking submission with no visible error.
+const FIELD_ORDER = [
+  'listingId',
+  'checkIn',
+  'checkOut',
+  'guests',
+  'guestName',
+  'guestEmail',
+] as const;
+
 export function BookingForm({ listingId, maxGuests, checkIn, checkOut, guests }: BookingFormProps) {
   const [state, formAction, pending] = useActionState(submitBooking, initialState);
-  const [clientError, setClientError] = useState<string | null>(null);
   const hasDateRange = Boolean(checkIn && checkOut);
 
-  // Mirrors the same checks the api enforces, so an invalid submission never
-  // makes the round trip at all — the Server Action re-runs CreateBookingSchema
-  // itself regardless, since a client can always bypass this handler.
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    const fields = bookingFieldsFromFormData(new FormData(event.currentTarget));
-    const parsed = CreateBookingSchema.safeParse(fields);
+  // maxGuests is a per-listing limit, not a shape rule, so it isn't expressed
+  // in CreateBookingSchema itself (see the schema's own comment) — it's
+  // layered on here, scoped to this listing.
+  const schema = useMemo(
+    () =>
+      CreateBookingSchema.refine((data) => data.guests <= maxGuests, {
+        message: `This listing sleeps up to ${maxGuests} guests.`,
+        path: ['guests'],
+      }),
+    [maxGuests],
+  );
 
-    if (!parsed.success) {
-      event.preventDefault();
-      setClientError(parsed.error.issues[0]?.message ?? 'Please check the booking details.');
-      return;
-    }
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<CreateBooking>({
+    resolver: zodResolver(schema),
+    defaultValues: { listingId, checkIn, checkOut, guests: guests ?? 1 },
+  });
 
-    // Not expressed in CreateBookingSchema — it's a per-listing limit, not a
-    // shape rule (see the schema's own comment) — so it's checked separately.
-    if (fields.guests > maxGuests) {
-      event.preventDefault();
-      setClientError(`This listing sleeps up to ${maxGuests} guests.`);
-      return;
-    }
-
-    setClientError(null);
+  // useActionState's dispatcher isn't only for <form action>: it can be
+  // invoked directly with whatever argument the action expects, which is how
+  // a React Hook Form-validated submit hands off to the Server Action here.
+  function onValid(values: CreateBooking) {
+    formAction(values);
   }
 
-  const error = clientError ?? state?.error;
+  const fieldError = FIELD_ORDER.map((field) => errors[field]?.message).find(Boolean);
+  const error = fieldError ?? state?.error;
 
   return (
-    <form action={formAction} onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-      <input type="hidden" name="listingId" value={listingId} />
+    <form onSubmit={handleSubmit(onValid)} noValidate className="flex flex-col gap-4">
+      <input type="hidden" {...register('listingId')} />
 
       {hasDateRange ? (
-        <input type="hidden" name="checkIn" value={checkIn} />
+        <>
+          <input type="hidden" {...register('checkIn')} />
+          <input type="hidden" {...register('checkOut')} />
+        </>
       ) : (
         <div className="flex items-end gap-2">
           <div className="flex flex-col gap-1">
             <Label htmlFor="book-check-in">Check-in</Label>
-            <Input id="book-check-in" type="date" name="checkIn" required className="w-40" />
+            <Input id="book-check-in" type="date" className="w-40" {...register('checkIn')} />
           </div>
           <div className="flex flex-col gap-1">
             <Label htmlFor="book-check-out">Check-out</Label>
-            <Input id="book-check-out" type="date" name="checkOut" required className="w-40" />
+            <Input id="book-check-out" type="date" className="w-40" {...register('checkOut')} />
           </div>
         </div>
       )}
-      {hasDateRange && <input type="hidden" name="checkOut" value={checkOut} />}
 
       {guests ? (
         <div className="flex flex-col gap-1">
@@ -75,7 +95,7 @@ export function BookingForm({ listingId, maxGuests, checkIn, checkOut, guests }:
           <p className="text-sm">
             {guests} guest{guests === 1 ? '' : 's'}
           </p>
-          <input type="hidden" name="guests" value={guests} />
+          <input type="hidden" {...register('guests', { valueAsNumber: true })} />
         </div>
       ) : (
         <div className="flex flex-col gap-1">
@@ -83,24 +103,22 @@ export function BookingForm({ listingId, maxGuests, checkIn, checkOut, guests }:
           <Input
             id="book-guests"
             type="number"
-            name="guests"
             min={1}
             max={maxGuests}
-            defaultValue={1}
-            required
             className="w-20"
+            {...register('guests', { valueAsNumber: true })}
           />
         </div>
       )}
 
       <div className="flex flex-col gap-1">
         <Label htmlFor="book-guest-name">Full name</Label>
-        <Input id="book-guest-name" type="text" name="guestName" required />
+        <Input id="book-guest-name" type="text" {...register('guestName')} />
       </div>
 
       <div className="flex flex-col gap-1">
         <Label htmlFor="book-guest-email">Email</Label>
-        <Input id="book-guest-email" type="email" name="guestEmail" required />
+        <Input id="book-guest-email" type="email" {...register('guestEmail')} />
       </div>
 
       {error && (
