@@ -180,7 +180,15 @@ describe('fetchListing', () => {
     await expect(fetchListing('unknown-id')).resolves.toBeNull();
   });
 
-  it('surfaces the message from the api error envelope for a non-404 failure', async () => {
+  it('returns null for a 400 (a malformed id), the same as an unknown one', async () => {
+    fetchMock.mockResolvedValue(
+      stubResponse({ error: { message: 'Invalid params' } }, { status: 400 }),
+    );
+
+    await expect(fetchListing('not-a-uuid')).resolves.toBeNull();
+  });
+
+  it('surfaces the message from the api error envelope for a non-400/404 failure', async () => {
     fetchMock.mockResolvedValue(
       stubResponse({ error: { message: 'Internal Server Error' } }, { status: 500 }),
     );

@@ -58,16 +58,19 @@ export async function fetchCities(): Promise<CityCentroid[]> {
   return CitiesResponseSchema.parse(await response.json()).cities;
 }
 
-// A 404 is an expected outcome here (a bad or stale listing link), not a
-// failure — the page turns a `null` return into Next's notFound(), while any
-// other non-2xx still surfaces as a thrown error like the other fetchers.
+// A malformed id and an unknown-but-well-formed one both need to render the
+// same not-found page rather than leaking the 400/404 distinction the api
+// makes between them (same reasoning as fetchBooking below) — a bad or stale
+// listing link, or a garbled date in the URL, is an expected outcome here,
+// not a failure. Any other non-2xx still surfaces as a thrown error like the
+// other fetchers.
 export async function fetchListing(
   id: string,
   dates?: { checkIn: string; checkOut: string },
 ): Promise<ListingDetail | null> {
   const query = dates ? `?${new URLSearchParams(dates).toString()}` : '';
   const response = await fetch(`${API_URL}/listings/${id}${query}`, { cache: 'no-store' });
-  if (response.status === 404) {
+  if (response.status === 404 || response.status === 400) {
     return null;
   }
   if (!response.ok) {
