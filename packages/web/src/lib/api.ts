@@ -1,10 +1,13 @@
 import {
+  BookingSchema,
   CitiesResponseSchema,
   ErrorResponseSchema,
   ListingDetailSchema,
   SearchResponseSchema,
   toSearchParams,
+  type Booking,
   type CityCentroid,
+  type CreateBooking,
   type ListingDetail,
   type SearchQuery,
   type SearchResponse,
@@ -16,14 +19,18 @@ import {
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
 // The api replies with one error envelope for every non-2xx (see
-// api/src/http/errors.ts), so surface the message it produced instead of
-// reducing the failure to a status code. safeParse, because an error from a
-// proxy or load balancer won't be in our envelope.
-async function failed(route: string, response: Response): Promise<never> {
+// api/src/http/errors.ts). safeParse, because an error from a proxy or load
+// balancer won't be in our envelope. Shared by `failed()` (which throws) and
+// any caller that needs the message without throwing, like createBooking's
+// 400 branch.
+async function errorMessageFrom(response: Response, fallback: string): Promise<string> {
   const body: unknown = await response.json().catch(() => null);
   const parsed = ErrorResponseSchema.safeParse(body);
-  const detail = parsed.success ? parsed.data.error.message : response.statusText;
+  return parsed.success ? parsed.data.error.message : fallback;
+}
 
+async function failed(route: string, response: Response): Promise<never> {
+  const detail = await errorMessageFrom(response, response.statusText);
   throw new Error(`${route} failed with status ${response.status}: ${detail}`);
 }
 
@@ -68,4 +75,40 @@ export async function fetchListing(
   }
 
   return ListingDetailSchema.parse(await response.json());
+}
+
+export type CreateBookingResult =
+  | { ok: true; booking: Booking }
+  | { ok: false; reason: 'conflict' }
+  | { ok: false; reason: 'invalid'; message: string };
+
+// 409 and 400 are both expected outcomes the booking form re-renders around
+// rather than failures: 409 means the #16 EXCLUDE constraint rejected
+// overlapping dates; 400 means server-side validation (e.g. guests over the
+// listing's maxGuests) caught something the client-side check missed. Any
+// other non-2xx is unexpected and still surfaces as a thrown error, like the
+// other fetchers.
+export async function createBooking(input: CreateBooking): Promise<CreateBookingResult> {
+  const response = await fetch(`${API_URL}/bookings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+    cache: 'no-store',
+  });
+
+  if (response.status === 409) {
+    return { ok: false, reason: 'conflict' };
+  }
+  if (response.status === 400) {
+    return {
+      ok: false,
+      reason: 'invalid',
+      message: await errorMessageFrom(response, 'Invalid booking details'),
+    };
+  }
+  if (!response.ok) {
+    await failed('POST /bookings', response);
+  }
+
+  return { ok: true, booking: BookingSchema.parse(await response.json()) };
 }

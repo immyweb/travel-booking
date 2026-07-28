@@ -1,6 +1,12 @@
-import type { CitiesResponse, ListingDetail, SearchResponse } from '@travel-booking/core';
+import type {
+  Booking,
+  CitiesResponse,
+  CreateBooking,
+  ListingDetail,
+  SearchResponse,
+} from '@travel-booking/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchCities, fetchListing, fetchSearchResults } from '@/lib/api';
+import { createBooking, fetchCities, fetchListing, fetchSearchResults } from '@/lib/api';
 
 const fetchMock = vi.fn();
 
@@ -201,5 +207,96 @@ describe('fetchListing', () => {
     await fetchListing(LISTING.id);
 
     expect(requestedUrl().search).toBe('');
+  });
+});
+
+const CREATE_BOOKING: CreateBooking = {
+  listingId: LISTING.id,
+  checkIn: '2026-08-05',
+  checkOut: '2026-08-10',
+  guests: 2,
+  guestName: 'Jane Doe',
+  guestEmail: 'jane@example.com',
+};
+
+const BOOKING: Booking = {
+  id: 'booking-1',
+  listingId: LISTING.id,
+  checkIn: '2026-08-05',
+  checkOut: '2026-08-10',
+  guests: 2,
+  guestName: 'Jane Doe',
+  guestEmail: 'jane@example.com',
+  nights: 5,
+  totalPrice: 410,
+  currency: 'EUR',
+};
+
+describe('createBooking', () => {
+  it('returns the parsed booking on success', async () => {
+    fetchMock.mockResolvedValue(stubResponse(BOOKING, { status: 201 }));
+
+    await expect(createBooking(CREATE_BOOKING)).resolves.toEqual({ ok: true, booking: BOOKING });
+  });
+
+  it('POSTs the input as the JSON body', async () => {
+    fetchMock.mockResolvedValue(stubResponse(BOOKING, { status: 201 }));
+
+    await createBooking(CREATE_BOOKING);
+
+    const call = fetchMock.mock.calls[0]!;
+    expect(call[0]).toBe('http://localhost:4000/bookings');
+    expect(call[1]).toMatchObject({ method: 'POST' });
+    expect(JSON.parse(call[1].body)).toEqual(CREATE_BOOKING);
+  });
+
+  it('returns a conflict result for a 409, rather than throwing', async () => {
+    fetchMock.mockResolvedValue(stubResponse({ error: { message: 'conflict' } }, { status: 409 }));
+
+    await expect(createBooking(CREATE_BOOKING)).resolves.toEqual({
+      ok: false,
+      reason: 'conflict',
+    });
+  });
+
+  it('returns an invalid result carrying the api message for a 400, rather than throwing', async () => {
+    fetchMock.mockResolvedValue(
+      stubResponse(
+        { error: { message: "guests exceeds this listing's maxGuests (4)" } },
+        { status: 400 },
+      ),
+    );
+
+    await expect(createBooking(CREATE_BOOKING)).resolves.toEqual({
+      ok: false,
+      reason: 'invalid',
+      message: "guests exceeds this listing's maxGuests (4)",
+    });
+  });
+
+  it('falls back to a generic message for a 400 whose body is not the error envelope', async () => {
+    fetchMock.mockResolvedValue(stubResponse(null, { status: 400, unparseable: true }));
+
+    await expect(createBooking(CREATE_BOOKING)).resolves.toEqual({
+      ok: false,
+      reason: 'invalid',
+      message: 'Invalid booking details',
+    });
+  });
+
+  it('surfaces the message from the api error envelope for a non-400/409 failure', async () => {
+    fetchMock.mockResolvedValue(
+      stubResponse({ error: { message: 'Internal Server Error' } }, { status: 500 }),
+    );
+
+    await expect(createBooking(CREATE_BOOKING)).rejects.toThrow(
+      'POST /bookings failed with status 500: Internal Server Error',
+    );
+  });
+
+  it('rejects a payload that does not match the contract', async () => {
+    fetchMock.mockResolvedValue(stubResponse({ id: BOOKING.id }, { status: 201 }));
+
+    await expect(createBooking(CREATE_BOOKING)).rejects.toThrow();
   });
 });
