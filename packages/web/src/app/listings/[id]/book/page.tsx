@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
 import { notFound } from 'next/navigation';
+import { ListingSummaryCard } from '@/components/pages/ListingSummaryCard';
 import { fetchListing } from '@/lib/api';
 import { BookingForm } from './_components/BookingForm';
 
@@ -63,30 +63,18 @@ export default async function BookListingPage({ params, searchParams }: BookList
         </p>
       </div>
 
-      <div className="flex gap-4 rounded-lg border border-border p-4">
-        <div className="relative h-24 w-32 shrink-0 overflow-hidden rounded-lg bg-muted">
-          <Image
-            src={listing.images[0]!}
-            alt={listing.title}
-            fill
-            sizes="128px"
-            className="object-cover"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <h2 className="font-medium">{listing.title}</h2>
-          <p className="text-sm text-muted-foreground">
-            {listing.price} {listing.currency} / night · Sleeps up to {listing.maxGuests} guests
+      <ListingSummaryCard title={listing.title} image={listing.images[0]!}>
+        <p className="text-sm text-muted-foreground">
+          {listing.price} {listing.currency} / night · Sleeps up to {listing.maxGuests} guests
+        </p>
+        {listing.availability && (
+          <p data-testid="stay-summary" className="text-sm text-muted-foreground">
+            {listing.availability.checkIn} – {listing.availability.checkOut} ·{' '}
+            {listing.availability.nights} night{listing.availability.nights === 1 ? '' : 's'} ·{' '}
+            {listing.availability.totalPrice} {listing.currency} total
           </p>
-          {listing.availability && (
-            <p data-testid="stay-summary" className="text-sm text-muted-foreground">
-              {listing.availability.checkIn} – {listing.availability.checkOut} ·{' '}
-              {listing.availability.nights} night{listing.availability.nights === 1 ? '' : 's'} ·{' '}
-              {listing.availability.totalPrice} {listing.currency} total
-            </p>
-          )}
-        </div>
-      </div>
+        )}
+      </ListingSummaryCard>
 
       <BookingForm
         listingId={listing.id}

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
 import { notFound } from 'next/navigation';
+import { ListingSummaryCard } from '@/components/pages/ListingSummaryCard';
 import { fetchBooking, fetchListing } from '@/lib/api';
 
 type BookingConfirmationPageProps = {
@@ -48,27 +48,15 @@ export default async function BookingConfirmationPage({ params }: BookingConfirm
         </p>
       </div>
 
-      <div className="flex gap-4 rounded-lg border border-border p-4">
-        <div className="relative h-24 w-32 shrink-0 overflow-hidden rounded-lg bg-muted">
-          <Image
-            src={listing.images[0]!}
-            alt={listing.title}
-            fill
-            sizes="128px"
-            className="object-cover"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <h2 className="font-medium">{listing.title}</h2>
-          <p className="text-sm text-muted-foreground">
-            {booking.checkIn} – {booking.checkOut} · {booking.nights} night
-            {booking.nights === 1 ? '' : 's'}
-          </p>
-          <p className="text-lg font-semibold">
-            {booking.totalPrice} {booking.currency} total
-          </p>
-        </div>
-      </div>
+      <ListingSummaryCard title={listing.title} image={listing.images[0]!}>
+        <p className="text-sm text-muted-foreground">
+          {booking.checkIn} – {booking.checkOut} · {booking.nights} night
+          {booking.nights === 1 ? '' : 's'}
+        </p>
+        <p className="text-lg font-semibold">
+          {booking.totalPrice} {booking.currency} total
+        </p>
+      </ListingSummaryCard>
 
       <div className="flex flex-col gap-1 rounded-lg border border-border p-4">
         <h2 className="text-lg font-medium">Guest details</h2>
