@@ -39,6 +39,24 @@ export function validateParams<Schema extends ZodType>(
   };
 }
 
+// JSON body validation, for write routes like POST /bookings. Express 5 still
+// allows writing `req.body` (unlike `req.query`/`req.params`, which are
+// getter-only), but parsed data is passed as an argument anyway, for the same
+// inferred-type-at-the-call-site benefit the other two get.
+export function validateBody<Schema extends ZodType>(
+  schema: Schema,
+  handler: (body: z.output<Schema>, req: Request, res: Response) => Promise<void> | void,
+): RequestHandler {
+  return async (req, res) => {
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new ApiError(400, 'Invalid request body', z.flattenError(parsed.error));
+    }
+
+    await handler(parsed.data, req, res);
+  };
+}
+
 // For routes that need both — e.g. GET /listings/:id, where the id is a path
 // param and checkIn/checkOut are query params. A single pass so a bad path
 // param 400s before a bad query param is even parsed.

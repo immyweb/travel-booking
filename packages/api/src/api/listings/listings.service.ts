@@ -6,8 +6,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { bookingOverlapsRange } from '../../db/booking-overlap';
 import type { Db } from '../../db/db';
 import { bookings, listings } from '../../db/schema';
-
-const MS_PER_NIGHT = 24 * 60 * 60 * 1000;
+import { nightsBetween } from '../../pricing/nights';
 
 async function computeAvailability(
   db: Db,
@@ -22,9 +21,7 @@ async function computeAvailability(
     .where(and(eq(bookings.listingId, listingId), bookingOverlapsRange(checkIn, checkOut)))
     .limit(1);
 
-  const nights = Math.round(
-    (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / MS_PER_NIGHT,
-  );
+  const nights = nightsBetween(checkIn, checkOut);
 
   return {
     checkIn,

@@ -41,7 +41,7 @@ export const SearchQuerySchema = z
     page: z.coerce.number().int().positive().default(1),
     size: z.coerce.number().int().positive().max(100).default(12),
   })
-  .refine((query) => (query.checkIn === undefined) === (query.checkOut === undefined), {
+  .refine(checkInAndCheckOutSuppliedTogether, {
     message: 'checkIn and checkOut must be supplied together',
     path: ['checkIn'],
   });
@@ -102,6 +102,22 @@ export const AvailabilitySchema = z.object({
 });
 export type Availability = z.infer<typeof AvailabilitySchema>;
 
+type DateRange = { checkIn?: string; checkOut?: string };
+
+// Shared by every schema that carries a checkIn/checkOut pair (Listing Detail's
+// query params, a booking request's body) so the "partial or reversed range"
+// rejection reads identically everywhere it's enforced.
+function checkInAndCheckOutSuppliedTogether(range: DateRange): boolean {
+  return (range.checkIn === undefined) === (range.checkOut === undefined);
+}
+
+// ISO date strings compare lexicographically the same as chronologically —
+// without this, a reversed range would silently produce a negative
+// nights/totalPrice rather than being rejected as the client mistake it is.
+function checkOutAfterCheckIn(range: DateRange): boolean {
+  return !range.checkIn || !range.checkOut || range.checkOut > range.checkIn;
+}
+
 // GET /listings/:id's optional query params: checkIn/checkOut must be
 // supplied together, mirroring SearchQuerySchema's own refine — a lone
 // in-progress date is a client mistake (400), not a partial filter.
@@ -110,14 +126,11 @@ export const ListingQuerySchema = z
     checkIn: z.iso.date().optional(),
     checkOut: z.iso.date().optional(),
   })
-  .refine((query) => (query.checkIn === undefined) === (query.checkOut === undefined), {
+  .refine(checkInAndCheckOutSuppliedTogether, {
     message: 'checkIn and checkOut must be supplied together',
     path: ['checkIn'],
   })
-  // ISO date strings compare lexicographically the same as chronologically —
-  // without this, a reversed range would silently produce a negative
-  // nights/totalPrice rather than being rejected as the client mistake it is.
-  .refine((query) => !query.checkIn || !query.checkOut || query.checkOut > query.checkIn, {
+  .refine(checkOutAfterCheckIn, {
     message: 'checkOut must be after checkIn',
     path: ['checkOut'],
   });
@@ -141,6 +154,51 @@ export const ListingDetailSchema = z.object({
   availability: AvailabilitySchema.nullable(),
 });
 export type ListingDetail = z.infer<typeof ListingDetailSchema>;
+
+// POST /bookings' request body. checkIn/checkOut reuse Listing Detail's own
+// range refinements; guests/maxGuests-limit and price/currency-from-listing
+// are looked up server-side rather than expressed here, since they depend on
+// the Listing the request references.
+export const CreateBookingSchema = z
+  .object({
+    listingId: z.uuid(),
+    checkIn: z.iso.date(),
+    checkOut: z.iso.date(),
+    guests: z.number().int().positive(),
+    guestName: z.string().min(1),
+    guestEmail: z.email(),
+  })
+  // Both refinements are reused verbatim from ListingQuerySchema for a
+  // uniform error message even though checkIn/checkOut are required here —
+  // a booking always needs both dates, so "supplied together" only ever
+  // fires alongside the base required-field check, never instead of it.
+  .refine(checkInAndCheckOutSuppliedTogether, {
+    message: 'checkIn and checkOut must be supplied together',
+    path: ['checkIn'],
+  })
+  .refine(checkOutAfterCheckIn, {
+    message: 'checkOut must be after checkIn',
+    path: ['checkOut'],
+  });
+export type CreateBooking = z.infer<typeof CreateBookingSchema>;
+
+// The full Booking shape returned by both POST /bookings and GET
+// /bookings/:id. `nights`/`totalPrice` are computed server-side (ADR-0001:
+// captured in the Listing's own currency, never client-supplied) rather than
+// trusted from the request.
+export const BookingSchema = z.object({
+  id: z.string(),
+  listingId: z.string(),
+  checkIn: z.iso.date(),
+  checkOut: z.iso.date(),
+  guests: z.number(),
+  guestName: z.string(),
+  guestEmail: z.string(),
+  nights: z.number(),
+  totalPrice: z.number(),
+  currency: z.string(),
+});
+export type Booking = z.infer<typeof BookingSchema>;
 
 export const CityCentroidSchema = z.object({
   city: z.string(),

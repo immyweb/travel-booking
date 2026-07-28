@@ -4,7 +4,7 @@ import request from 'supertest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { ApiError, createErrorHandler, notFoundHandler } from './errors';
-import { validateQuery } from './validate';
+import { validateBody, validateQuery } from './validate';
 
 const logger = pino({ level: 'silent' });
 
@@ -105,5 +105,38 @@ describe('validateQuery', () => {
     expect(response.status).toBe(400);
     expect(response.body.error.message).toBe('Invalid query parameters');
     expect(response.body.error.details.fieldErrors.radiusKm).toBeDefined();
+  });
+});
+
+describe('validateBody', () => {
+  const schema = z.object({ guests: z.number().int().positive() });
+
+  function appValidating() {
+    const local = express();
+    local.use(express.json());
+    local.post(
+      '/thing',
+      validateBody(schema, (body, _req, res) => {
+        res.status(201).json({ received: body.guests });
+      }),
+    );
+    local.use(notFoundHandler);
+    local.use(createErrorHandler(logger));
+    return local;
+  }
+
+  it('passes parsed JSON body data to the handler', async () => {
+    const response = await request(appValidating()).post('/thing').send({ guests: 2 });
+
+    expect(response.status).toBe(201);
+    expect(response.body).toEqual({ received: 2 });
+  });
+
+  it('rejects invalid input through the same envelope as every other error', async () => {
+    const response = await request(appValidating()).post('/thing').send({ guests: -1 });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.message).toBe('Invalid request body');
+    expect(response.body.error.details.fieldErrors.guests).toBeDefined();
   });
 });
