@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "bun --env-file=../../.env --watch src/index.ts",
-    "start": "bun --env-file=../../.env src/index.ts",
+    "dev": "bun --env-file=../../.env --env-file=.env --watch src/index.ts",
+    "start": "bun --env-file=../../.env --env-file=.env src/index.ts",
     "test": "bun --bun --env-file=../../.env --env-file=.env.test vitest run",
     "typecheck": "tsc --noEmit",
     "db:generate": "bun --env-file=../../.env drizzle-kit generate",
