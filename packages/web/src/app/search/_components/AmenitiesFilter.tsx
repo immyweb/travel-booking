@@ -1,6 +1,7 @@
 'use client';
 
 import { AMENITIES, type Amenity } from '@travel-booking/core';
+import { ChevronDownIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
@@ -52,6 +53,10 @@ export function AmenitiesFilter({
       <DropdownMenuTrigger asChild>
         <Button variant="outline">
           Amenities{amenities.length > 0 ? ` (${amenities.length})` : ''}
+          <ChevronDownIcon
+            data-icon="inline-end"
+            className="pointer-events-none size-4 text-muted-foreground"
+          />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>

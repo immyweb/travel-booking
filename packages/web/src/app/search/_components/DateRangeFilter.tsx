@@ -3,6 +3,7 @@
 import type { Amenity } from '@travel-booking/core';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 type DateRangeFilterProps = {
   city: { city: string; country: string };
@@ -31,21 +32,27 @@ export function DateRangeFilter({
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <Input
-        type="date"
-        aria-label="Check-in"
-        value={checkIn ?? ''}
-        onChange={(event) => pushDates(event.target.value || undefined, checkOut)}
-        className="w-40"
-      />
-      <Input
-        type="date"
-        aria-label="Check-out"
-        value={checkOut ?? ''}
-        onChange={(event) => pushDates(checkIn, event.target.value || undefined)}
-        className="w-40"
-      />
+    <div className="flex items-end gap-2">
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="date-range-check-in">Check-in</Label>
+        <Input
+          id="date-range-check-in"
+          type="date"
+          value={checkIn ?? ''}
+          onChange={(event) => pushDates(event.target.value || undefined, checkOut)}
+          className="w-40"
+        />
+      </div>
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="date-range-check-out">Check-out</Label>
+        <Input
+          id="date-range-check-out"
+          type="date"
+          value={checkOut ?? ''}
+          onChange={(event) => pushDates(checkIn, event.target.value || undefined)}
+          className="w-40"
+        />
+      </div>
     </div>
   );
 }

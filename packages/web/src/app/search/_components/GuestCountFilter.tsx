@@ -3,6 +3,7 @@
 import type { Amenity } from '@travel-booking/core';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 type GuestCountFilterProps = {
   city: { city: string; country: string };
@@ -31,13 +32,16 @@ export function GuestCountFilter({
   }
 
   return (
-    <Input
-      type="number"
-      min={1}
-      aria-label="Guests"
-      value={guests ?? ''}
-      onChange={(event) => pushGuests(event.target.value || undefined)}
-      className="w-20"
-    />
+    <div className="flex flex-col gap-1">
+      <Label htmlFor="guest-count">Guests</Label>
+      <Input
+        id="guest-count"
+        type="number"
+        min={1}
+        value={guests ?? '0'}
+        onChange={(event) => pushGuests(event.target.value || undefined)}
+        className="w-20"
+      />
+    </div>
   );
 }
