@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "bun --env-file=../../.env drizzle-kit generate",
     "db:migrate": "bun --env-file=../../.env scripts/migrate.ts",
-    "db:seed": "bun --env-file=../../.env scripts/seed.ts"
+    "db:seed": "bun --env-file=../../.env scripts/seed.ts",
+    "db:studio": "bun --env-file=../../.env drizzle-kit studio"
   },
   "dependencies": {
     "@travel-booking/core": "workspace:*",
@@ -26,6 +27,7 @@
     "@types/node": "^20",
     "@types/supertest": "^7.2.1",
     "drizzle-kit": "^0.31.10",
+    "postgres": "^3.4.9",
     "supertest": "^7.2.2",
     "vitest": "^4.1.10"
   }
