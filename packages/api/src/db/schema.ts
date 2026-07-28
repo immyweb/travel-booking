@@ -45,9 +45,11 @@ export const listings = pgTable(
   (table) => [index('listings_location_idx').using('gist', table.location)],
 );
 
-// Minimal shape Search needs to exclude unavailable listings — the Booking
-// feature's own spec extends this table (guest details, price, status, etc.)
-// with an additive migration rather than creating a new one.
+// Guest details/price captured additively (see the Booking feature's own
+// spec) rather than in a new table. Overlap-safety for concurrent bookings on
+// the same listing is enforced by a hand-written EXCLUDE constraint (see
+// drizzle/0004_bookings_no_overlap.sql) — drizzle-orm has no schema DSL for it,
+// so it isn't modeled here.
 export const bookings = pgTable(
   'bookings',
   {
@@ -57,6 +59,11 @@ export const bookings = pgTable(
       .references(() => listings.id),
     checkIn: date('check_in', { mode: 'string' }).notNull(),
     checkOut: date('check_out', { mode: 'string' }).notNull(),
+    guestName: text('guest_name').notNull(),
+    guestEmail: text('guest_email').notNull(),
+    guests: integer('guests').notNull(),
+    totalPrice: integer('total_price').notNull(),
+    currency: varchar('currency', { length: 3 }).notNull(),
   },
   (table) => [index('bookings_listing_id_idx').on(table.listingId)],
 );

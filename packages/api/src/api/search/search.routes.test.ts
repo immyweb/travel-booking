@@ -43,7 +43,16 @@ async function seedListing(overrides: {
 }
 
 async function seedBooking(listingId: string, checkIn: string, checkOut: string) {
-  await db.insert(bookings).values({ listingId, checkIn, checkOut });
+  await db.insert(bookings).values({
+    listingId,
+    checkIn,
+    checkOut,
+    guestName: 'Existing Guest',
+    guestEmail: 'existing-guest@example.com',
+    guests: 1,
+    totalPrice: 1,
+    currency: 'EUR',
+  });
 }
 
 afterEach(async () => {
