@@ -2,6 +2,7 @@ import express, { type Express } from 'express';
 import pinoHttp from 'pino-http';
 import type { Db } from './db/db';
 import type { Logger } from './logging/logger';
+import type { Mailer } from './mailer/mailer';
 import { createBookingsRouter } from './api/bookings/bookings.routes';
 import { createListingsRouter } from './api/listings/listings.routes';
 import { createSearchRouter } from './api/search/search.routes';
@@ -10,10 +11,15 @@ import { createErrorHandler, notFoundHandler } from './errors/errors';
 export type AppDependencies = {
   db: Db;
   logger: Logger;
+  mailer: Mailer;
 };
 
 // The api's composition root: every slice is mounted here, and everything the
 // app needs arrives as an argument. Nothing in this file reads the environment.
+// mailer isn't destructured below yet — no route calls it until the booking
+// creation flow is wired up in a later ticket. It's still required here so
+// every caller of createApp (index.ts, test-support/context.ts) constructs
+// one now, rather than that ticket having to touch every call site.
 export function createApp({ db, logger }: AppDependencies): Express {
   const app = express();
 
