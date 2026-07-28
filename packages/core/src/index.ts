@@ -90,6 +90,26 @@ export const SearchResponseSchema = z.object({
 });
 export type SearchResponse = z.infer<typeof SearchResponseSchema>;
 
+// The full single-listing read (`GET /listings/:id`) — distinct from
+// ListingSummarySchema's search-result row, which carries `distanceKm`
+// instead of the fields only a detail view needs. `availability` is always
+// `null` for this slice; date-based availability is a separate, later
+// extension of this same shape.
+export const ListingDetailSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  images: z.array(z.string()),
+  price: z.number(),
+  currency: z.string(),
+  maxGuests: z.number(),
+  amenities: z.array(AmenitySchema),
+  city: z.string(),
+  country: z.string(),
+  coordinates: CoordinatesSchema,
+  availability: z.null(),
+});
+export type ListingDetail = z.infer<typeof ListingDetailSchema>;
+
 export const CityCentroidSchema = z.object({
   city: z.string(),
   country: z.string(),

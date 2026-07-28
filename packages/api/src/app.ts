@@ -2,6 +2,7 @@ import express, { type Express } from 'express';
 import pinoHttp from 'pino-http';
 import type { Db } from './db/db';
 import type { Logger } from './logging/logger';
+import { createListingsRouter } from './api/listings/listings.routes';
 import { createSearchRouter } from './api/search/search.routes';
 import { createErrorHandler, notFoundHandler } from './errors/errors';
 
@@ -35,6 +36,7 @@ export function createApp({ db, logger }: AppDependencies): Express {
   });
 
   app.use(createSearchRouter(db));
+  app.use(createListingsRouter(db));
 
   // Order is load-bearing: every route first, then the 404 fallback for
   // anything unmatched, then the error seam last so both can reach it.

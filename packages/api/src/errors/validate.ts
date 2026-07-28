@@ -21,3 +21,20 @@ export function validateQuery<Schema extends ZodType>(
     await handler(parsed.data, req, res);
   };
 }
+
+// Path params get the same treatment as query params, for the same reason:
+// Express 5's `req.params` has no setter either, so parsed data is handed to
+// the route as an argument rather than written back onto the request.
+export function validateParams<Schema extends ZodType>(
+  schema: Schema,
+  handler: (params: z.output<Schema>, req: Request, res: Response) => Promise<void> | void,
+): RequestHandler {
+  return async (req, res) => {
+    const parsed = schema.safeParse(req.params);
+    if (!parsed.success) {
+      throw new ApiError(400, 'Invalid path parameters', z.flattenError(parsed.error));
+    }
+
+    await handler(parsed.data, req, res);
+  };
+}

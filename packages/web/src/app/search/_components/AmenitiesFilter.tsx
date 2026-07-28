@@ -10,6 +10,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { amenityLabel } from '@/lib/utils';
 
 type AmenitiesFilterProps = {
   city: { city: string; country: string };
@@ -18,13 +19,6 @@ type AmenitiesFilterProps = {
   guests?: string;
   amenities: Amenity[];
 };
-
-function amenityLabel(amenity: Amenity): string {
-  return amenity
-    .split('_')
-    .map((word) => word[0]!.toUpperCase() + word.slice(1))
-    .join(' ');
-}
 
 export function AmenitiesFilter({
   city,

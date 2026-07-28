@@ -1,6 +1,6 @@
-import type { CitiesResponse, SearchResponse } from '@travel-booking/core';
+import type { CitiesResponse, ListingDetail, SearchResponse } from '@travel-booking/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchCities, fetchSearchResults } from '@/lib/api';
+import { fetchCities, fetchListing, fetchSearchResults } from '@/lib/api';
 
 const fetchMock = vi.fn();
 
@@ -136,5 +136,51 @@ describe('fetchSearchResults', () => {
     fetchMock.mockResolvedValue(stubResponse({ pagination: SEARCH.pagination }));
 
     await expect(fetchSearchResults(QUERY)).rejects.toThrow();
+  });
+});
+
+const LISTING: ListingDetail = {
+  id: 'listing-1',
+  title: 'Sunny Alfama studio',
+  images: ['https://images.travel-booking.example/1.jpg'],
+  price: 82,
+  currency: 'EUR',
+  maxGuests: 4,
+  amenities: ['wifi', 'parking'],
+  city: 'Lisbon',
+  country: 'Portugal',
+  coordinates: { latitude: 38.7127, longitude: -9.1288 },
+  availability: null,
+};
+
+describe('fetchListing', () => {
+  it('returns the parsed listing', async () => {
+    fetchMock.mockResolvedValue(stubResponse(LISTING));
+
+    await expect(fetchListing(LISTING.id)).resolves.toEqual(LISTING);
+  });
+
+  it('returns null for a 404, rather than throwing', async () => {
+    fetchMock.mockResolvedValue(
+      stubResponse({ error: { message: 'Listing not found' } }, { status: 404 }),
+    );
+
+    await expect(fetchListing('unknown-id')).resolves.toBeNull();
+  });
+
+  it('surfaces the message from the api error envelope for a non-404 failure', async () => {
+    fetchMock.mockResolvedValue(
+      stubResponse({ error: { message: 'Internal Server Error' } }, { status: 500 }),
+    );
+
+    await expect(fetchListing(LISTING.id)).rejects.toThrow(
+      'GET /listings/:id failed with status 500: Internal Server Error',
+    );
+  });
+
+  it('rejects a payload that does not match the contract', async () => {
+    fetchMock.mockResolvedValue(stubResponse({ id: LISTING.id }));
+
+    await expect(fetchListing(LISTING.id)).rejects.toThrow();
   });
 });
