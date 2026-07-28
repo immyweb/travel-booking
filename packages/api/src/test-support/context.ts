@@ -22,5 +22,9 @@ export function createTestContext(): TestContext {
   const logger = createLogger(config.log.level);
   const mailer = createFakeMailer();
 
-  return { app: createApp({ db, logger, mailer }), db, mailer };
+  return {
+    app: createApp({ db, logger, mailer, webAppUrl: config.mailer.webAppUrl }),
+    db,
+    mailer,
+  };
 }

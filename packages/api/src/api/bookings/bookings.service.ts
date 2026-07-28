@@ -3,6 +3,9 @@ import { eq } from 'drizzle-orm';
 import { SQL } from 'bun';
 import { ApiError } from '../../errors/errors';
 import type { Db } from '../../db/db';
+import type { Logger } from '../../logging/logger';
+import type { Mailer } from '../../mailer/mailer';
+import { bookingConfirmationEmail } from '../../mailer/emails/BookingConfirmationEmail';
 import { bookings, listings } from '../../db/schema';
 import { nightsBetween } from '../../pricing/nights';
 
@@ -12,13 +15,28 @@ import { nightsBetween } from '../../pricing/nights';
 // surfaces here as a driver error, not an application-level race.
 const EXCLUSION_VIOLATION = '23P01';
 
+export type CreateBookingDependencies = {
+  db: Db;
+  mailer: Mailer;
+  logger: Logger;
+  webAppUrl: string;
+};
+
 function toBooking(row: typeof bookings.$inferSelect): Booking {
   return { ...row, nights: nightsBetween(row.checkIn, row.checkOut) };
 }
 
-export async function createBooking(db: Db, input: CreateBooking): Promise<Booking> {
+export async function createBooking(
+  { db, mailer, logger, webAppUrl }: CreateBookingDependencies,
+  input: CreateBooking,
+): Promise<Booking> {
   const [listing] = await db
-    .select({ price: listings.price, currency: listings.currency, maxGuests: listings.maxGuests })
+    .select({
+      title: listings.title,
+      price: listings.price,
+      currency: listings.currency,
+      maxGuests: listings.maxGuests,
+    })
     .from(listings)
     .where(eq(listings.id, input.listingId))
     .limit(1);
@@ -31,7 +49,8 @@ export async function createBooking(db: Db, input: CreateBooking): Promise<Booki
     throw new ApiError(400, `guests exceeds this listing's maxGuests (${listing.maxGuests})`);
   }
 
-  const totalPrice = nightsBetween(input.checkIn, input.checkOut) * listing.price;
+  const nights = nightsBetween(input.checkIn, input.checkOut);
+  const totalPrice = nights * listing.price;
 
   let row: typeof bookings.$inferSelect | undefined;
   try {
@@ -59,7 +78,38 @@ export async function createBooking(db: Db, input: CreateBooking): Promise<Booki
     throw err;
   }
 
-  return toBooking(row!);
+  const booking = toBooking(row!);
+  const confirmationUrl = `${webAppUrl}/bookings/${booking.id}`;
+
+  // Best-effort: the booking has already succeeded and is never rolled back
+  // or retried for a failed send. Await it (so the side effect stays
+  // deterministic and testable) but never let it reach the caller — a flaky
+  // email provider must not turn a successful booking into a 500.
+  try {
+    const { subject, react } = bookingConfirmationEmail({
+      guestName: booking.guestName,
+      listingTitle: listing.title,
+      checkIn: booking.checkIn,
+      checkOut: booking.checkOut,
+      nights: booking.nights,
+      totalPrice: booking.totalPrice,
+      currency: booking.currency,
+      confirmationUrl,
+    });
+
+    await mailer.send({
+      to: booking.guestEmail,
+      subject,
+      react,
+      // Resend's own recommended <event-type>/<entity-id> pattern, so a
+      // future retry mechanism can never double-send for the same booking.
+      idempotencyKey: `booking-confirmation/${booking.id}`,
+    });
+  } catch (err) {
+    logger.error(err, `Failed to send booking confirmation email for booking ${booking.id}`);
+  }
+
+  return booking;
 }
 
 export async function getBookingById(db: Db, id: string): Promise<Booking | null> {

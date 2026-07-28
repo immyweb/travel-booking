@@ -10,6 +10,7 @@ import {
   Section,
   Text,
 } from 'react-email';
+import type { Email } from '../mailer';
 
 export type BookingConfirmationEmailProps = {
   guestName: string;
@@ -21,6 +22,18 @@ export type BookingConfirmationEmailProps = {
   currency: string;
   confirmationUrl: string;
 };
+
+// Builds both the subject and the react element together, so the one place
+// that knows this email's copy is this file — callers outside the mailer
+// module pass in plain data and never import JSX themselves.
+export function bookingConfirmationEmail(
+  props: BookingConfirmationEmailProps,
+): Pick<Email, 'subject' | 'react'> {
+  return {
+    subject: `Your booking at ${props.listingTitle} is confirmed`,
+    react: <BookingConfirmationEmail {...props} />,
+  };
+}
 
 export function BookingConfirmationEmail({
   guestName,

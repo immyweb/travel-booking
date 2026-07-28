@@ -16,8 +16,7 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string({
     error: 'RESEND_API_KEY is not set — required to send booking confirmation emails',
   }),
-  // Not yet read anywhere — reserved for the confirmation link a later ticket
-  // builds into the booking confirmation email.
+  // Builds the confirmation link inside the booking confirmation email.
   WEB_APP_URL: z.url().default('http://localhost:3000'),
 });
 

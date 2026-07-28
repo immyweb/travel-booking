@@ -12,15 +12,12 @@ export type AppDependencies = {
   db: Db;
   logger: Logger;
   mailer: Mailer;
+  webAppUrl: string;
 };
 
 // The api's composition root: every slice is mounted here, and everything the
 // app needs arrives as an argument. Nothing in this file reads the environment.
-// mailer isn't destructured below yet — no route calls it until the booking
-// creation flow is wired up in a later ticket. It's still required here so
-// every caller of createApp (index.ts, test-support/context.ts) constructs
-// one now, rather than that ticket having to touch every call site.
-export function createApp({ db, logger }: AppDependencies): Express {
+export function createApp({ db, logger, mailer, webAppUrl }: AppDependencies): Express {
   const app = express();
 
   // First, so every request — including ones that never reach a route — gets
@@ -47,7 +44,7 @@ export function createApp({ db, logger }: AppDependencies): Express {
 
   app.use(createSearchRouter(db));
   app.use(createListingsRouter(db));
-  app.use(createBookingsRouter(db));
+  app.use(createBookingsRouter({ db, mailer, logger, webAppUrl }));
 
   // Order is load-bearing: every route first, then the 404 fallback for
   // anything unmatched, then the error seam last so both can reach it.

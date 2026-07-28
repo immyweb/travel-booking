@@ -1,9 +1,9 @@
 import { BookingSchema, CreateBookingSchema } from '@travel-booking/core';
 import { Router } from 'express';
 import { z } from 'zod';
-import type { Db } from '../../db/db';
 import { ApiError } from '../../errors/errors';
 import { validateBody, validateParams } from '../../errors/validate';
+import type { CreateBookingDependencies } from './bookings.service';
 import { createBooking, getBookingById } from './bookings.service';
 
 // Malformed (non-UUID) ids are a client mistake (400); well-formed ids that
@@ -11,13 +11,13 @@ import { createBooking, getBookingById } from './bookings.service';
 // GET /listings/:id's ListingParamsSchema.
 const BookingParamsSchema = z.object({ id: z.uuid() });
 
-export function createBookingsRouter(db: Db): Router {
+export function createBookingsRouter(deps: CreateBookingDependencies): Router {
   const bookingsRouter = Router();
 
   bookingsRouter.post(
     '/bookings',
     validateBody(CreateBookingSchema, async (body, _req, res) => {
-      const booking = await createBooking(db, body);
+      const booking = await createBooking(deps, body);
 
       // `parse`, not `safeParse` — a response that doesn't match the contract
       // is our bug, so it belongs on the 500 path rather than being reported
@@ -29,7 +29,7 @@ export function createBookingsRouter(db: Db): Router {
   bookingsRouter.get(
     '/bookings/:id',
     validateParams(BookingParamsSchema, async ({ id }, _req, res) => {
-      const booking = await getBookingById(db, id);
+      const booking = await getBookingById(deps.db, id);
       if (!booking) {
         throw new ApiError(404, 'Booking not found');
       }

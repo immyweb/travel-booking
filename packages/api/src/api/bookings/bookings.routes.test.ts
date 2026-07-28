@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { bookings, listings } from '../../db/schema';
 import { createTestContext } from '../../test-support/context';
 
-const { app, db } = createTestContext();
+const { app, db, mailer } = createTestContext();
 
 // Isolated from real curated/seed data — and from other test files' own marker
 // countries, since test files run as separate processes against the same
@@ -50,6 +50,7 @@ afterEach(async () => {
     .where(eq(listings.country, TEST_COUNTRY));
   await db.delete(bookings).where(inArray(bookings.listingId, testListingIds));
   await db.delete(listings).where(eq(listings.country, TEST_COUNTRY));
+  mailer.send.mockClear();
 });
 
 describe('POST /bookings', () => {
@@ -78,6 +79,41 @@ describe('POST /bookings', () => {
       totalPrice: 500,
       currency: 'EUR',
     });
+    expect(mailer.send).toHaveBeenCalledExactlyOnceWith({
+      to: 'jane@example.com',
+      subject: 'Your booking at Sunny Alfama studio is confirmed',
+      react: expect.anything(),
+      idempotencyKey: `booking-confirmation/${response.body.id}`,
+    });
+  });
+
+  it('still returns 201 with the booking when the confirmation email fails to send', async () => {
+    const listingId = await seedListing({ price: 100 });
+    mailer.send.mockRejectedValueOnce(new Error('Resend is down'));
+
+    const response = await request(app).post('/bookings').send({
+      listingId,
+      checkIn: '2026-08-05',
+      checkOut: '2026-08-10',
+      guests: 2,
+      guestName: 'Jane Doe',
+      guestEmail: 'jane@example.com',
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body).toEqual({
+      id: expect.any(String),
+      listingId,
+      checkIn: '2026-08-05',
+      checkOut: '2026-08-10',
+      guests: 2,
+      guestName: 'Jane Doe',
+      guestEmail: 'jane@example.com',
+      nights: 5,
+      totalPrice: 500,
+      currency: 'EUR',
+    });
+    expect(mailer.send).toHaveBeenCalledTimes(1);
   });
 
   it('returns 404 for an unknown listingId', async () => {
