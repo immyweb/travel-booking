@@ -46,6 +46,15 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Brand palette — homepage marketing surfaces (header, hero, footer).
+     Named after the Lisbon/Sintra/Cascais/Paris inventory it's drawn from,
+     not the generic shadcn scale above. */
+  --color-azulejo: var(--azulejo);
+  --color-azulejo-light: var(--azulejo-light);
+  --color-terracotta: var(--terracotta);
+  --color-limestone: var(--limestone);
+  --color-gold: var(--gold);
 }
 
 :root {
@@ -81,6 +90,16 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  --azulejo: #1e3a5c;
+  --azulejo-light: #2f5c8a;
+  /* Darkened from #c1613d — white text on the original shade was 4.16:1,
+     just under WCAG AA's 4.5:1 for the "Search stays" button. */
+  --terracotta: #b2582f;
+  /* Lightened from #fbf8f3 — muted-foreground text on the original shade
+     landed at 4.47:1 against this background specifically, just under AA. */
+  --limestone: #fdfbf8;
+  --gold: #d6a144;
 }
 
 .dark {
@@ -126,5 +145,16 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
