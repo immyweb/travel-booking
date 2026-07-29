@@ -1,5 +1,8 @@
 import { AmenitySchema, type Amenity } from '@travel-booking/core';
 import { Suspense } from 'react';
+import { displayFont } from '@/app/_components/fonts';
+import { HomeFooter } from '@/app/_components/HomeFooter';
+import { HomeHeader } from '@/app/_components/HomeHeader';
 import { fetchCities, fetchSearchResults } from '@/lib/api';
 import { AmenitiesFilter } from './_components/AmenitiesFilter';
 import { CityPicker } from './_components/CityPicker';
@@ -30,8 +33,7 @@ type SearchPageProps = {
 };
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
-  const params = await searchParams;
-  const cities = await fetchCities();
+  const [params, cities] = await Promise.all([searchParams, fetchCities()]);
 
   const selectedCity =
     cities.find((city) => city.city === params.city && city.country === params.country) ??
@@ -39,9 +41,13 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   if (!selectedCity) {
     return (
-      <main className="flex flex-1 items-center justify-center p-8">
-        <p className="text-muted-foreground">No destinations available yet.</p>
-      </main>
+      <>
+        <HomeHeader />
+        <main className="flex flex-1 items-center justify-center bg-limestone p-8">
+          <p className="text-muted-foreground">No destinations available yet.</p>
+        </main>
+        <HomeFooter cities={cities} />
+      </>
     );
   }
 
@@ -90,50 +96,69 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   });
 
   return (
-    <main className="flex flex-1 flex-col">
-      <h1 className="sr-only">Search stays</h1>
-      <div className="flex items-end gap-3 border-b border-border p-4">
-        <CityPicker
-          cities={cities}
-          selectedCity={{ city: selectedCity.city, country: selectedCity.country }}
-          checkIn={checkIn}
-          checkOut={checkOut}
-          guests={guestsParam}
-          amenities={amenities}
-        />
-        <DateRangeFilter
-          city={{ city: selectedCity.city, country: selectedCity.country }}
-          checkIn={params.checkIn}
-          checkOut={params.checkOut}
-          guests={guestsParam}
-          amenities={amenities}
-        />
-        <GuestCountFilter
-          city={{ city: selectedCity.city, country: selectedCity.country }}
-          checkIn={checkIn}
-          checkOut={checkOut}
-          guests={params.guests}
-          amenities={amenities}
-        />
-        <AmenitiesFilter
-          city={{ city: selectedCity.city, country: selectedCity.country }}
-          checkIn={checkIn}
-          checkOut={checkOut}
-          guests={guestsParam}
-          amenities={amenities}
-        />
-      </div>
+    <>
+      <HomeHeader />
+      <main className="flex flex-1 flex-col bg-limestone">
+        <div className="motion-safe:animate-[rise-in_0.5s_ease-out] border-b border-azulejo/10 bg-white">
+          <div className="mx-auto flex max-w-6xl flex-col gap-5 px-6 py-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="font-mono text-xs tracking-wide text-azulejo/60 uppercase">
+                Search results
+              </p>
+              <h1
+                className={`${displayFont.className} text-2xl font-semibold text-azulejo sm:text-3xl`}
+              >
+                Stays in {selectedCity.city}, {selectedCity.country}
+              </h1>
+            </div>
+            <div className="flex flex-wrap items-end gap-3">
+              <CityPicker
+                cities={cities}
+                selectedCity={{ city: selectedCity.city, country: selectedCity.country }}
+                checkIn={checkIn}
+                checkOut={checkOut}
+                guests={guestsParam}
+                amenities={amenities}
+              />
+              <DateRangeFilter
+                city={{ city: selectedCity.city, country: selectedCity.country }}
+                checkIn={params.checkIn}
+                checkOut={params.checkOut}
+                guests={guestsParam}
+                amenities={amenities}
+              />
+              <GuestCountFilter
+                city={{ city: selectedCity.city, country: selectedCity.country }}
+                checkIn={checkIn}
+                checkOut={checkOut}
+                guests={params.guests}
+                amenities={amenities}
+              />
+              <AmenitiesFilter
+                city={{ city: selectedCity.city, country: selectedCity.country }}
+                checkIn={checkIn}
+                checkOut={checkOut}
+                guests={guestsParam}
+                amenities={amenities}
+              />
+            </div>
+          </div>
+        </div>
 
-      <Suspense fallback={<ResultsSkeleton />}>
-        <SearchResultsSection
-          resultsPromise={resultsPromise}
-          city={{ city: selectedCity.city, country: selectedCity.country }}
-          checkIn={checkIn}
-          checkOut={checkOut}
-          guests={guests}
-          amenities={amenities}
-        />
-      </Suspense>
-    </main>
+        <div className="mx-auto w-full max-w-6xl px-6 py-8">
+          <Suspense fallback={<ResultsSkeleton />}>
+            <SearchResultsSection
+              resultsPromise={resultsPromise}
+              city={{ city: selectedCity.city, country: selectedCity.country }}
+              checkIn={checkIn}
+              checkOut={checkOut}
+              guests={guests}
+              amenities={amenities}
+            />
+          </Suspense>
+        </div>
+      </main>
+      <HomeFooter cities={cities} />
+    </>
   );
 }

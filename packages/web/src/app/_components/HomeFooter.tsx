@@ -44,8 +44,10 @@ export function HomeFooter({ cities }: HomeFooterProps) {
           </nav>
         )}
       </div>
-      <div className="border-t border-white/10 px-6 py-4 text-xs text-white/70">
-        © {new Date().getFullYear()} Travel Booking
+      <div className="border-t border-white/10">
+        <div className="mx-auto max-w-6xl px-6 py-4 text-xs text-white/70">
+          © {new Date().getFullYear()} Travel Booking
+        </div>
       </div>
     </footer>
   );

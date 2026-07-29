@@ -4,7 +4,7 @@ import type { ListingSummary } from '@travel-booking/core';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { TileMark } from '@/app/_components/TileMark';
 import { carryDatesAndGuests } from '@/lib/utils';
 
 type SearchResultsProps = {
@@ -15,6 +15,17 @@ type SearchResultsProps = {
 };
 
 type MapPosition = { left: string; top: string };
+
+// Static regardless of props/state (the literal "map tiles" backdrop) —
+// hoisted so hovering a listing, which re-renders this component for its
+// activeId state, doesn't reconstruct these 60 SVG nodes every time.
+const MAP_TILE_TEXTURE = (
+  <div className="absolute inset-0 grid grid-cols-10 gap-8 p-4 text-azulejo opacity-[0.07]">
+    {Array.from({ length: 60 }, (_, index) => (
+      <TileMark key={index} className="size-6" />
+    ))}
+  </div>
+);
 
 // Places listings inside a padded 0-100% box based on their coordinate
 // spread — a static stand-in for real map projection/tiles (out of scope
@@ -51,8 +62,8 @@ export function SearchResults({ results, checkIn, checkOut, guests }: SearchResu
   }
 
   return (
-    <div className="flex flex-1 overflow-hidden">
-      <ol aria-label="Search results" className="w-full space-y-4 overflow-y-auto p-4 md:w-1/2">
+    <div className="flex h-[520px] overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-azulejo/10 sm:h-[600px]">
+      <ol aria-label="Search results" className="w-full space-y-3 overflow-y-auto p-4 md:w-1/2">
         {results.map((listing) => (
           <li
             key={listing.id}
@@ -62,42 +73,39 @@ export function SearchResults({ results, checkIn, checkOut, guests }: SearchResu
             <Link
               href={listingHref(listing.id)}
               target="_blank"
-              className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              data-active={activeId === listing.id}
+              className="group flex gap-3 rounded-xl p-3 ring-1 ring-azulejo/10 transition hover:bg-limestone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta data-[active=true]:bg-limestone data-[active=true]:ring-2 data-[active=true]:ring-terracotta/60"
             >
-              <Card
-                data-active={activeId === listing.id}
-                className="flex-row gap-3 p-3 transition data-[active=true]:ring-foreground/40"
-              >
-                <div className="relative size-20 shrink-0 overflow-hidden rounded-lg bg-muted">
-                  {listing.images[0] && (
-                    <Image
-                      src={listing.images[0]}
-                      alt={listing.title}
-                      fill
-                      sizes="80px"
-                      className="object-cover"
-                    />
-                  )}
-                </div>
-                <CardContent className="flex flex-1 flex-col justify-center gap-0.5 p-0">
-                  <p className="text-sm font-medium">{listing.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {listing.distanceKm.toFixed(1)} km away
-                  </p>
-                  <p className="text-sm font-semibold">
-                    {listing.price} {listing.currency}{' '}
-                    <span className="font-normal text-muted-foreground">/ night</span>
-                  </p>
-                </CardContent>
-              </Card>
+              <div className="relative size-20 shrink-0 overflow-hidden rounded-lg bg-muted">
+                {listing.images[0] && (
+                  <Image
+                    src={listing.images[0]}
+                    alt={listing.title}
+                    fill
+                    sizes="80px"
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                )}
+              </div>
+              <div className="flex flex-1 flex-col justify-center gap-0.5">
+                <p className="font-mono text-xs text-azulejo/60">
+                  {listing.distanceKm.toFixed(1)} km away
+                </p>
+                <p className="text-sm font-medium text-foreground">{listing.title}</p>
+                <p className="font-mono text-sm font-semibold text-azulejo">
+                  {listing.price} {listing.currency}{' '}
+                  <span className="font-normal text-muted-foreground">/ night</span>
+                </p>
+              </div>
             </Link>
           </li>
         ))}
       </ol>
       <div
         aria-hidden="true"
-        className="relative hidden flex-1 bg-gradient-to-br from-sky-50 to-emerald-50 md:block dark:from-sky-950 dark:to-emerald-950"
+        className="relative hidden flex-1 overflow-hidden bg-gradient-to-br from-azulejo-light/10 via-limestone to-gold/10 md:block"
       >
+        {MAP_TILE_TEXTURE}
         {results.map((listing) => {
           const position = positions[listing.id];
           if (!position) return null;
@@ -108,7 +116,7 @@ export function SearchResults({ results, checkIn, checkOut, guests }: SearchResu
               data-active={activeId === listing.id}
               onMouseEnter={() => setActiveId(listing.id)}
               onMouseLeave={() => setActiveId((id) => (id === listing.id ? null : id))}
-              className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground px-2.5 py-1 text-xs font-semibold text-background shadow-md transition data-[active=true]:scale-110"
+              className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-terracotta px-2.5 py-1 text-xs font-semibold text-white shadow-md ring-2 ring-white/70 transition data-[active=true]:scale-110"
             >
               {listing.price} {listing.currency}
             </div>

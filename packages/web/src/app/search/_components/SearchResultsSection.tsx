@@ -38,33 +38,48 @@ export function SearchResultsSection({
   }
 
   return (
-    <>
+    <div className="flex flex-col gap-4">
       {results.length === 0 ? (
         <EmptyState />
       ) : (
-        <SearchResults results={results} checkIn={checkIn} checkOut={checkOut} guests={guests} />
+        <>
+          <p className="font-mono text-xs text-azulejo/60">
+            {pagination.total} {pagination.total === 1 ? 'stay' : 'stays'} found
+          </p>
+          <SearchResults results={results} checkIn={checkIn} checkOut={checkOut} guests={guests} />
+        </>
       )}
 
       {pagination.totalPages > 1 && (
         <nav
           aria-label="Search results pages"
-          className="flex items-center justify-center gap-4 border-t border-border p-4 text-sm"
+          className="flex items-center justify-center gap-4 pt-2 text-sm"
         >
           {pagination.page > 1 ? (
-            <Link href={pageHref(pagination.page - 1)}>Previous</Link>
+            <Link
+              href={pageHref(pagination.page - 1)}
+              className="font-medium text-azulejo hover:text-terracotta"
+            >
+              Previous
+            </Link>
           ) : (
             <span className="text-muted-foreground">Previous</span>
           )}
-          <span>
+          <span className="font-mono text-xs text-azulejo/70">
             Page {pagination.page} of {pagination.totalPages}
           </span>
           {pagination.page < pagination.totalPages ? (
-            <Link href={pageHref(pagination.page + 1)}>Next</Link>
+            <Link
+              href={pageHref(pagination.page + 1)}
+              className="font-medium text-azulejo hover:text-terracotta"
+            >
+              Next
+            </Link>
           ) : (
             <span className="text-muted-foreground">Next</span>
           )}
         </nav>
       )}
-    </>
+    </div>
   );
 }

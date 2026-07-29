@@ -16,6 +16,12 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
 }));
 
+// The Next.js font loader transform only runs inside Next's own build, not
+// under Vitest, so next/font/google resolves to no usable export here.
+vi.mock('next/font/google', () => ({
+  Bricolage_Grotesque: () => ({ className: 'font-display-mock' }),
+}));
+
 const MOCK_CITIES: CityCentroid[] = [
   { city: 'Lisbon', country: 'Portugal', coordinates: { latitude: 38.7169, longitude: -9.1399 } },
   { city: 'Paris', country: 'France', coordinates: { latitude: 48.8566, longitude: 2.3522 } },
