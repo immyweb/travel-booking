@@ -8,6 +8,12 @@ vi.mock('../_actions', () => ({
   submitBooking: vi.fn(async () => null),
 }));
 
+// The Next.js font loader transform only runs inside Next's own build, not
+// under Vitest, so next/font/google resolves to no usable export here.
+vi.mock('next/font/google', () => ({
+  Bricolage_Grotesque: () => ({ className: 'font-display-mock' }),
+}));
+
 const LISTING_ID = '11111111-1111-4111-8111-111111111111';
 
 beforeEach(() => {

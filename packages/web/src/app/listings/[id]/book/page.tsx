@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { ListingSummaryCard } from '@/components/pages/ListingSummaryCard';
+import { displayFont } from '@/app/_components/fonts';
+import { ListingSummaryCard } from '@/app/_components/ListingSummaryCard';
 import { fetchListing } from '@/lib/api';
 import { BookingForm } from './_components/BookingForm';
 
@@ -55,34 +56,42 @@ export default async function BookListingPage({ params, searchParams }: BookList
     requestedGuests <= listing.maxGuests;
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-4">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">Confirm your booking</h1>
-        <p className="text-muted-foreground">
-          {listing.city}, {listing.country}
-        </p>
-      </div>
-
-      <ListingSummaryCard title={listing.title} image={listing.images[0]!}>
-        <p className="text-sm text-muted-foreground">
-          {listing.price} {listing.currency} / night · Sleeps up to {listing.maxGuests} guests
-        </p>
-        {listing.availability && (
-          <p data-testid="stay-summary" className="text-sm text-muted-foreground">
-            {listing.availability.checkIn} – {listing.availability.checkOut} ·{' '}
-            {listing.availability.nights} night{listing.availability.nights === 1 ? '' : 's'} ·{' '}
-            {listing.availability.totalPrice} {listing.currency} total
+    <main className="flex flex-1 flex-col bg-limestone">
+      <div className="motion-safe:animate-[rise-in_0.5s_ease-out] mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-12 sm:py-16">
+        <div className="flex flex-col gap-1.5">
+          <p className="font-mono text-xs tracking-wide text-azulejo/60 uppercase">
+            {listing.city}, {listing.country}
           </p>
-        )}
-      </ListingSummaryCard>
+          <h1
+            className={`${displayFont.className} text-3xl font-semibold text-azulejo sm:text-4xl`}
+          >
+            Confirm your booking
+          </h1>
+        </div>
 
-      <BookingForm
-        listingId={listing.id}
-        maxGuests={listing.maxGuests}
-        checkIn={hasDateRange ? checkIn : undefined}
-        checkOut={hasDateRange ? checkOut : undefined}
-        guests={hasGuestCount ? requestedGuests : undefined}
-      />
+        <ListingSummaryCard title={listing.title} image={listing.images[0]!}>
+          <p className="font-mono text-sm text-azulejo/80">
+            {listing.price} {listing.currency} / night · Sleeps up to {listing.maxGuests} guests
+          </p>
+          {listing.availability && (
+            <p data-testid="stay-summary" className="font-mono text-sm text-azulejo/80">
+              {listing.availability.checkIn} – {listing.availability.checkOut} ·{' '}
+              {listing.availability.nights} night{listing.availability.nights === 1 ? '' : 's'} ·{' '}
+              {listing.availability.totalPrice} {listing.currency} total
+            </p>
+          )}
+        </ListingSummaryCard>
+
+        <div className="h-px w-full bg-azulejo/10" />
+
+        <BookingForm
+          listingId={listing.id}
+          maxGuests={listing.maxGuests}
+          checkIn={hasDateRange ? checkIn : undefined}
+          checkOut={hasDateRange ? checkOut : undefined}
+          guests={hasGuestCount ? requestedGuests : undefined}
+        />
+      </div>
     </main>
   );
 }

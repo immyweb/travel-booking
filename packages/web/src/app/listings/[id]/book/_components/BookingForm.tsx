@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { CreateBookingSchema, type CreateBooking } from '@travel-booking/core';
 import { startTransition, useActionState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
+import { displayFont } from '@/app/_components/fonts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -73,68 +74,82 @@ export function BookingForm({ listingId, maxGuests, checkIn, checkOut, guests }:
   const error = fieldError ?? state?.error;
 
   return (
-    <form onSubmit={handleSubmit(onValid)} noValidate className="flex flex-col gap-4">
-      <input type="hidden" {...register('listingId')} />
+    <div className="flex flex-col gap-4">
+      <h2 className={`${displayFont.className} text-xl font-semibold text-azulejo`}>
+        Your details
+      </h2>
+      <form
+        onSubmit={handleSubmit(onValid)}
+        noValidate
+        className="flex flex-col gap-4 rounded-2xl bg-white p-6 ring-1 ring-azulejo/10 shadow-sm"
+      >
+        <input type="hidden" {...register('listingId')} />
 
-      {hasDateRange ? (
-        <>
-          <input type="hidden" {...register('checkIn')} />
-          <input type="hidden" {...register('checkOut')} />
-        </>
-      ) : (
-        <div className="flex items-end gap-2">
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="book-check-in">Check-in</Label>
-            <Input id="book-check-in" type="date" className="w-40" {...register('checkIn')} />
+        {hasDateRange ? (
+          <>
+            <input type="hidden" {...register('checkIn')} />
+            <input type="hidden" {...register('checkOut')} />
+          </>
+        ) : (
+          <div className="flex items-end gap-2">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="book-check-in">Check-in</Label>
+              <Input id="book-check-in" type="date" className="w-40" {...register('checkIn')} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="book-check-out">Check-out</Label>
+              <Input id="book-check-out" type="date" className="w-40" {...register('checkOut')} />
+            </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="book-check-out">Check-out</Label>
-            <Input id="book-check-out" type="date" className="w-40" {...register('checkOut')} />
-          </div>
-        </div>
-      )}
+        )}
 
-      {guests ? (
+        {guests ? (
+          <div className="flex flex-col gap-1">
+            <Label>Guests</Label>
+            <p className="text-sm">
+              {guests} guest{guests === 1 ? '' : 's'}
+            </p>
+            <input type="hidden" {...register('guests', { valueAsNumber: true })} />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="book-guests">Guests</Label>
+            <Input
+              id="book-guests"
+              type="number"
+              min={1}
+              max={maxGuests}
+              className="w-20"
+              {...register('guests', { valueAsNumber: true })}
+            />
+          </div>
+        )}
+
         <div className="flex flex-col gap-1">
-          <Label>Guests</Label>
-          <p className="text-sm">
-            {guests} guest{guests === 1 ? '' : 's'}
+          <Label htmlFor="book-guest-name">Full name</Label>
+          <Input id="book-guest-name" type="text" {...register('guestName')} />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="book-guest-email">Email</Label>
+          <Input id="book-guest-email" type="email" {...register('guestEmail')} />
+        </div>
+
+        {error && (
+          <p role="alert" className="text-sm font-medium text-destructive">
+            {error}
           </p>
-          <input type="hidden" {...register('guests', { valueAsNumber: true })} />
-        </div>
-      ) : (
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="book-guests">Guests</Label>
-          <Input
-            id="book-guests"
-            type="number"
-            min={1}
-            max={maxGuests}
-            className="w-20"
-            {...register('guests', { valueAsNumber: true })}
-          />
-        </div>
-      )}
+        )}
 
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="book-guest-name">Full name</Label>
-        <Input id="book-guest-name" type="text" {...register('guestName')} />
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="book-guest-email">Email</Label>
-        <Input id="book-guest-email" type="email" {...register('guestEmail')} />
-      </div>
-
-      {error && (
-        <p role="alert" className="text-sm font-medium text-destructive">
-          {error}
-        </p>
-      )}
-
-      <Button type="submit" disabled={pending}>
-        Confirm booking
-      </Button>
-    </form>
+        <Button
+          type="submit"
+          size="lg"
+          disabled={pending}
+          className="h-11 w-full bg-terracotta text-white hover:bg-terracotta/90 focus-visible:ring-terracotta/40"
+        >
+          Confirm booking
+        </Button>
+      </form>
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { ListingSummaryCard } from '@/components/pages/ListingSummaryCard';
+import { displayFont } from '@/app/_components/fonts';
+import { ListingSummaryCard } from '@/app/_components/ListingSummaryCard';
 import { fetchBooking, fetchListing } from '@/lib/api';
 
 type BookingConfirmationPageProps = {
@@ -40,28 +41,38 @@ export default async function BookingConfirmationPage({ params }: BookingConfirm
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-4">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">Booking confirmed</h1>
-        <p className="text-muted-foreground">
-          {listing.city}, {listing.country}
-        </p>
-      </div>
+    <main className="flex flex-1 flex-col bg-limestone">
+      <div className="motion-safe:animate-[rise-in_0.5s_ease-out] mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-12 sm:py-16">
+        <div className="flex flex-col gap-1.5">
+          <p className="font-mono text-xs tracking-wide text-azulejo/60 uppercase">
+            {listing.city}, {listing.country}
+          </p>
+          <h1
+            className={`${displayFont.className} text-3xl font-semibold text-azulejo sm:text-4xl`}
+          >
+            Booking confirmed
+          </h1>
+        </div>
 
-      <ListingSummaryCard title={listing.title} image={listing.images[0]!}>
-        <p className="text-sm text-muted-foreground">
-          {booking.checkIn} – {booking.checkOut} · {booking.nights} night
-          {booking.nights === 1 ? '' : 's'}
-        </p>
-        <p className="text-lg font-semibold">
-          {booking.totalPrice} {booking.currency} total
-        </p>
-      </ListingSummaryCard>
+        <ListingSummaryCard title={listing.title} image={listing.images[0]!}>
+          <p className="font-mono text-sm text-azulejo/80">
+            {booking.checkIn} – {booking.checkOut} · {booking.nights} night
+            {booking.nights === 1 ? '' : 's'}
+          </p>
+          <p className="font-mono text-lg font-semibold text-azulejo">
+            {booking.totalPrice} {booking.currency} total
+          </p>
+        </ListingSummaryCard>
 
-      <div className="flex flex-col gap-1 rounded-lg border border-border p-4">
-        <h2 className="text-lg font-medium">Guest details</h2>
-        <p className="text-sm text-muted-foreground">{booking.guestName}</p>
-        <p className="text-sm text-muted-foreground">{booking.guestEmail}</p>
+        <div className="h-px w-full bg-azulejo/10" />
+
+        <div className="flex flex-col gap-1.5 rounded-2xl bg-white p-6 ring-1 ring-azulejo/10 shadow-sm">
+          <h2 className={`${displayFont.className} text-xl font-semibold text-azulejo`}>
+            Guest details
+          </h2>
+          <p className="text-sm text-muted-foreground">{booking.guestName}</p>
+          <p className="text-sm text-muted-foreground">{booking.guestEmail}</p>
+        </div>
       </div>
     </main>
   );

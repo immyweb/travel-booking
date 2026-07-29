@@ -8,8 +8,8 @@ type StaticPageProps = {
 
 // Shared body shell for standalone content pages (About, Terms, Privacy,
 // Accessibility, Cookies) reached from the footer — header/footer come from
-// the (marketing) route group's layout, same as Home, Search and Listing
-// Detail; this only covers what's specific to a static content page.
+// the root layout, same as every other page; this only covers what's
+// specific to a static content page.
 export function StaticPage({ title, children }: StaticPageProps) {
   return (
     <main className="flex flex-1 flex-col bg-limestone">

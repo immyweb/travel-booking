@@ -9,6 +9,12 @@ vi.mock('@/lib/api', () => ({
   fetchListing: vi.fn(),
 }));
 
+// The Next.js font loader transform only runs inside Next's own build, not
+// under Vitest, so next/font/google resolves to no usable export here.
+vi.mock('next/font/google', () => ({
+  Bricolage_Grotesque: () => ({ className: 'font-display-mock' }),
+}));
+
 const notFoundMock = vi.fn(() => {
   // Mirrors next/navigation's real notFound(), which throws to halt
   // rendering — callers rely on this to short-circuit past a null result.
