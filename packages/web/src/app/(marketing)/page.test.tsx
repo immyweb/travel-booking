@@ -51,15 +51,13 @@ beforeEach(() => {
 });
 
 describe('HomePage', () => {
-  it('renders the hero heading, header and footer nav, and a search form', async () => {
+  it('renders the hero heading and a search form', async () => {
     const ui = await HomePage();
     render(ui);
 
     expect(
       screen.getByRole('heading', { name: /Rooftops in Lisbon/i, level: 1 }),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: 'Search stays' }).length).toBeGreaterThan(0);
-    expect(screen.getByRole('navigation', { name: 'Destinations' })).toBeInTheDocument();
     expect(screen.getByLabelText('Where to?')).toBeInTheDocument();
   });
 

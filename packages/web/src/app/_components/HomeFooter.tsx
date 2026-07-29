@@ -1,14 +1,16 @@
-import type { CityCentroid } from '@travel-booking/core';
 import Link from 'next/link';
-import { searchHref } from '@/lib/utils';
 import { displayFont } from './fonts';
 import { TileMark } from './TileMark';
 
-type HomeFooterProps = {
-  cities: CityCentroid[];
-};
+const FOOTER_LINKS = [
+  { href: '/about', label: 'About' },
+  { href: '/terms', label: 'Terms & conditions' },
+  { href: '/privacy', label: 'Privacy' },
+  { href: '/accessibility', label: 'Accessibility' },
+  { href: '/cookies', label: 'Cookies' },
+];
 
-export function HomeFooter({ cities }: HomeFooterProps) {
+export function HomeFooter() {
   return (
     <footer className="bg-azulejo text-white">
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-10 sm:flex-row sm:justify-between">
@@ -24,25 +26,21 @@ export function HomeFooter({ cities }: HomeFooterProps) {
             between.
           </p>
         </div>
-        {cities.length > 0 && (
-          <nav aria-label="Destinations" className="flex flex-col gap-2.5">
-            <span className="text-xs font-medium tracking-wide text-white/70 uppercase">
-              Destinations
-            </span>
-            <ul className="flex flex-col gap-1.5">
-              {cities.map((city) => (
-                <li key={`${city.city}::${city.country}`}>
-                  <Link
-                    href={searchHref({ city: { city: city.city, country: city.country } })}
-                    className="text-sm text-white/80 hover:text-white hover:underline underline-offset-4"
-                  >
-                    {city.city}, {city.country}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        )}
+        <nav aria-label="Company" className="flex flex-col gap-2.5">
+          <span className="text-xs font-medium tracking-wide text-white/70 uppercase">Company</span>
+          <ul className="flex flex-col gap-1.5">
+            {FOOTER_LINKS.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className="text-sm text-white/80 hover:text-white hover:underline underline-offset-4"
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </div>
       <div className="border-t border-white/10">
         <div className="mx-auto max-w-6xl px-6 py-4 text-xs text-white/70">
