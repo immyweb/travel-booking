@@ -6,6 +6,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Map, Marker } from 'react-map-gl/maplibre';
 import type { MapRef } from 'react-map-gl/maplibre';
+import { applyBrandMapStyle } from './mapBrandStyle';
 
 // No API key/account needed — see ADR-0004.
 const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
@@ -28,6 +29,12 @@ export function SearchResultsMap({
 }: SearchResultsMapProps) {
   const mapRef = useRef<MapRef>(null);
   const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !loaded) return;
+    applyBrandMapStyle(map);
+  }, [loaded]);
 
   // Fits the map to the current results whenever they change (a new filter,
   // page, or city) — the map never drives its own search, so this is the
