@@ -1,8 +1,9 @@
 import { eq, inArray } from 'drizzle-orm';
 import request from 'supertest';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { bookings, listings } from '../../db/schema';
 import { createTestContext } from '../../test-support/context';
+import { signUpSharedTestUser } from '../../test-support/auth';
 
 const { app, db } = createTestContext();
 
@@ -10,6 +11,24 @@ const { app, db } = createTestContext();
 // countries, since test files run as separate processes against the same
 // database — by a marker country unique to this file.
 const TEST_COUNTRY = 'ListingDetailTestland';
+
+// Signed up once in beforeAll, not afterEach-cleaned, since every seeded
+// booking in this file shares one account — these tests exercise Listing
+// Detail's availability logic, not who a booking belongs to.
+let testUserId: string;
+let cleanupTestUser: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ userId: testUserId, cleanup: cleanupTestUser } = await signUpSharedTestUser(
+    app,
+    db,
+    'listings-routes-test.example',
+  ));
+});
+
+afterAll(async () => {
+  await cleanupTestUser();
+});
 
 async function seedListing() {
   const [row] = await db
@@ -33,6 +52,7 @@ async function seedListing() {
 async function seedBooking(listingId: string, checkIn: string, checkOut: string) {
   await db.insert(bookings).values({
     listingId,
+    userId: testUserId,
     checkIn,
     checkOut,
     guestName: 'Existing Guest',

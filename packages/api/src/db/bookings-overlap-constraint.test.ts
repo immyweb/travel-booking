@@ -2,13 +2,32 @@
 // drizzle/0004_bookings_no_overlap.sql) at the database level, with no API
 // route or application-level check involved — the insert itself is rejected.
 import { eq, inArray } from 'drizzle-orm';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { createTestContext } from '../test-support/context';
+import { signUpSharedTestUser } from '../test-support/auth';
 import { bookings, listings } from './schema';
 
-const { db } = createTestContext();
+const { app, db } = createTestContext();
 
 const TEST_COUNTRY = 'BookingsOverlapConstraintTestland';
+
+// Signed up once in beforeAll, not afterEach-cleaned, since every booking
+// inserted in this file shares one account — these tests exercise the
+// DB-level EXCLUDE constraint, not who a booking belongs to.
+let testUserId: string;
+let cleanupTestUser: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ userId: testUserId, cleanup: cleanupTestUser } = await signUpSharedTestUser(
+    app,
+    db,
+    'bookings-overlap-constraint-test.example',
+  ));
+});
+
+afterAll(async () => {
+  await cleanupTestUser();
+});
 
 async function seedListing() {
   const [row] = await db
@@ -32,6 +51,7 @@ async function seedListing() {
 function bookingValues(listingId: string, checkIn: string, checkOut: string) {
   return {
     listingId,
+    userId: testUserId,
     checkIn,
     checkOut,
     guestName: 'Test Guest',

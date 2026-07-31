@@ -1,7 +1,7 @@
 import type {
   Booking,
   CitiesResponse,
-  CreateBooking,
+  ClientCreateBooking,
   ListingDetail,
   SearchResponse,
 } from '@travel-booking/core';
@@ -248,7 +248,7 @@ describe('fetchListing', () => {
   });
 });
 
-const CREATE_BOOKING: CreateBooking = {
+const CREATE_BOOKING: ClientCreateBooking = {
   listingId: LISTING.id,
   checkIn: '2026-08-05',
   checkOut: '2026-08-10',
@@ -260,6 +260,7 @@ const CREATE_BOOKING: CreateBooking = {
 const BOOKING: Booking = {
   id: 'booking-1',
   listingId: LISTING.id,
+  userId: 'user-1',
   checkIn: '2026-08-05',
   checkOut: '2026-08-10',
   guests: 2,
@@ -277,15 +278,31 @@ describe('createBooking', () => {
     await expect(createBooking(CREATE_BOOKING)).resolves.toEqual({ ok: true, booking: BOOKING });
   });
 
-  it('POSTs the input as the JSON body', async () => {
+  it('POSTs the input as the JSON body, forwarding the current session cookie', async () => {
+    cookieStore.getAll.mockReturnValue([{ name: 'better-auth.session_token', value: 'abc123' }]);
     fetchMock.mockResolvedValue(stubResponse(BOOKING, { status: 201 }));
 
     await createBooking(CREATE_BOOKING);
 
     const call = fetchMock.mock.calls[0]!;
     expect(call[0]).toBe('http://localhost:4000/bookings');
-    expect(call[1]).toMatchObject({ method: 'POST' });
+    expect(call[1]).toMatchObject({
+      method: 'POST',
+      headers: expect.objectContaining({ Cookie: 'better-auth.session_token=abc123' }),
+    });
     expect(JSON.parse(call[1].body)).toEqual(CREATE_BOOKING);
+  });
+
+  it('returns an invalid result with a sign-in prompt for a 401, rather than throwing', async () => {
+    fetchMock.mockResolvedValue(
+      stubResponse({ error: { message: 'Unauthorized' } }, { status: 401 }),
+    );
+
+    await expect(createBooking(CREATE_BOOKING)).resolves.toEqual({
+      ok: false,
+      reason: 'invalid',
+      message: 'Please sign in to complete your booking.',
+    });
   });
 
   it('returns a conflict result for a 409, rather than throwing', async () => {

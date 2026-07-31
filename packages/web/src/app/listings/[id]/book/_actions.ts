@@ -1,6 +1,6 @@
 'use server';
 
-import { CreateBookingSchema, type CreateBooking } from '@travel-booking/core';
+import { ClientCreateBookingSchema, type ClientCreateBooking } from '@travel-booking/core';
 import { redirect } from 'next/navigation';
 import { createBooking } from '@/lib/api';
 
@@ -12,12 +12,12 @@ export type BookingFormState = { error: string } | null;
 // Actions security guidance — so the input is re-validated here rather than
 // trusted as already-shaped. Beyond that, this defers to the api's own
 // authoritative checks (listing existence, maxGuests, the #16 EXCLUDE
-// constraint) via createBooking.
+// constraint, and — new in #28 — the signed-in session) via createBooking.
 export async function submitBooking(
   _prevState: BookingFormState,
-  input: CreateBooking,
+  input: ClientCreateBooking,
 ): Promise<BookingFormState> {
-  const parsed = CreateBookingSchema.safeParse(input);
+  const parsed = ClientCreateBookingSchema.safeParse(input);
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Please check the booking details.' };

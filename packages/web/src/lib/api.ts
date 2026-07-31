@@ -7,7 +7,7 @@ import {
   toSearchParams,
   type Booking,
   type CityCentroid,
-  type CreateBooking,
+  type ClientCreateBooking,
   type ListingDetail,
   type SearchQuery,
   type SearchResponse,
@@ -94,20 +94,29 @@ export type CreateBookingResult =
   | { ok: false; reason: 'conflict' }
   | { ok: false; reason: 'invalid'; message: string };
 
-// 409 and 400 are both expected outcomes the booking form re-renders around
-// rather than failures: 409 means the #16 EXCLUDE constraint rejected
+// 401, 409 and 400 are all expected outcomes the booking form re-renders
+// around rather than failures: 401 means the session cookie is missing/
+// expired (userId is derived from it server-side — never client-supplied,
+// see CreateBookingSchema); 409 means the #16 EXCLUDE constraint rejected
 // overlapping dates; 400 means server-side validation (e.g. guests over the
 // listing's maxGuests) caught something the client-side check missed. Any
 // other non-2xx is unexpected and still surfaces as a thrown error, like the
 // other fetchers.
-export async function createBooking(input: CreateBooking): Promise<CreateBookingResult> {
+export async function createBooking(input: ClientCreateBooking): Promise<CreateBookingResult> {
   const response = await fetch(`${API_URL}/bookings`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Cookie: await currentCookieHeader() },
     body: JSON.stringify(input),
     cache: 'no-store',
   });
 
+  if (response.status === 401) {
+    return {
+      ok: false,
+      reason: 'invalid',
+      message: 'Please sign in to complete your booking.',
+    };
+  }
   if (response.status === 409) {
     return { ok: false, reason: 'conflict' };
   }

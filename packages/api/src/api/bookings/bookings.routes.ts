@@ -1,4 +1,5 @@
 import { BookingSchema, CreateBookingSchema } from '@travel-booking/core';
+import { fromNodeHeaders } from 'better-auth/node';
 import { Router } from 'express';
 import { z } from 'zod';
 import { ApiError } from '../../errors/errors';
@@ -16,6 +17,21 @@ export function createBookingsRouter(deps: CreateBookingDependencies): Router {
 
   bookingsRouter.post(
     '/bookings',
+    // In-process call to Better Auth's own session logic — not an HTTP round
+    // trip — so it needs no Origin/trustedOrigins handling the way a real
+    // cross-origin request would. userId is never client-supplied (ADR-0001's
+    // "never client-supplied" treatment of price/currency, applied here to
+    // the account behind the booking): it's merged into the body from the
+    // session before CreateBookingSchema ever sees it.
+    async (req, _res, next) => {
+      const session = await deps.auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
+      if (!session) {
+        throw new ApiError(401, 'Sign in required to create a booking');
+      }
+
+      req.body = { ...req.body, userId: session.user.id };
+      next();
+    },
     validateBody(CreateBookingSchema, async (body, _req, res) => {
       const booking = await createBooking(deps, body);
 

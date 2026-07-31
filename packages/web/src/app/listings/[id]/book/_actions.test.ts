@@ -1,4 +1,4 @@
-import type { Booking, CreateBooking } from '@travel-booking/core';
+import type { Booking, ClientCreateBooking } from '@travel-booking/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createBooking } from '@/lib/api';
 import { submitBooking } from './_actions';
@@ -16,7 +16,7 @@ vi.mock('next/navigation', () => ({
   redirect: (path: string) => redirectMock(path),
 }));
 
-const VALID_INPUT: CreateBooking = {
+const VALID_INPUT: ClientCreateBooking = {
   listingId: '11111111-1111-4111-8111-111111111111',
   checkIn: '2026-08-05',
   checkOut: '2026-08-10',
@@ -28,6 +28,7 @@ const VALID_INPUT: CreateBooking = {
 const BOOKING: Booking = {
   id: 'booking-1',
   listingId: VALID_INPUT.listingId,
+  userId: 'user-1',
   checkIn: '2026-08-05',
   checkOut: '2026-08-10',
   guests: 2,

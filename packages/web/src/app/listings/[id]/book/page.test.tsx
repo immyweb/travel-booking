@@ -1,11 +1,12 @@
 import type { ListingDetail } from '@travel-booking/core';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchListing } from '@/lib/api';
+import { fetchListing, fetchSession } from '@/lib/api';
 import BookListingPage, { generateMetadata } from './page';
 
 vi.mock('@/lib/api', () => ({
   fetchListing: vi.fn(),
+  fetchSession: vi.fn(),
 }));
 
 // The Next.js font loader transform only runs inside Next's own build, not
@@ -29,8 +30,14 @@ const notFoundMock = vi.fn(() => {
   // rendering — callers rely on this to short-circuit past a null listing.
   throw new Error('NEXT_NOT_FOUND');
 });
+const redirectMock = vi.fn((path: string) => {
+  // Mirrors next/navigation's real redirect(), which throws to halt
+  // rendering — the page relies on this to short-circuit before fetchListing.
+  throw new Error(`NEXT_REDIRECT: ${path}`);
+});
 vi.mock('next/navigation', () => ({
   notFound: () => notFoundMock(),
+  redirect: (path: string) => redirectMock(path),
 }));
 
 const MOCK_LISTING: ListingDetail = {
@@ -52,10 +59,63 @@ const MOCK_LISTING: ListingDetail = {
 
 beforeEach(() => {
   vi.mocked(fetchListing).mockResolvedValue(MOCK_LISTING);
+  vi.mocked(fetchSession).mockResolvedValue({
+    id: 'user-1',
+    name: 'Jane Doe',
+    email: 'jane@example.com',
+  });
   notFoundMock.mockClear();
+  redirectMock.mockClear();
 });
 
 describe('BookListingPage', () => {
+  it('redirects to /sign-in with this page as the redirect param when signed out', async () => {
+    vi.mocked(fetchSession).mockResolvedValue(null);
+
+    await expect(
+      BookListingPage({
+        params: Promise.resolve({ id: MOCK_LISTING.id }),
+        searchParams: Promise.resolve({}),
+      }),
+    ).rejects.toThrow('NEXT_REDIRECT');
+
+    expect(redirectMock).toHaveBeenCalledWith(
+      `/sign-in?redirect=${encodeURIComponent(`/listings/${MOCK_LISTING.id}/book`)}`,
+    );
+    expect(fetchListing).not.toHaveBeenCalled();
+  });
+
+  it('preserves checkIn/checkOut/guests in the redirect param when signed out', async () => {
+    vi.mocked(fetchSession).mockResolvedValue(null);
+
+    await expect(
+      BookListingPage({
+        params: Promise.resolve({ id: MOCK_LISTING.id }),
+        searchParams: Promise.resolve({
+          checkIn: '2026-08-05',
+          checkOut: '2026-08-10',
+          guests: '2',
+        }),
+      }),
+    ).rejects.toThrow('NEXT_REDIRECT');
+
+    const expectedBookingPath = `/listings/${MOCK_LISTING.id}/book?checkIn=2026-08-05&checkOut=2026-08-10&guests=2`;
+    expect(redirectMock).toHaveBeenCalledWith(
+      `/sign-in?redirect=${encodeURIComponent(expectedBookingPath)}`,
+    );
+  });
+
+  it('renders normally, with no redirect, when signed in', async () => {
+    const ui = await BookListingPage({
+      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      searchParams: Promise.resolve({}),
+    });
+    render(ui);
+
+    expect(redirectMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: MOCK_LISTING.title })).toBeInTheDocument();
+  });
+
   it('renders the listing summary: title, city/country, price and capacity', async () => {
     const ui = await BookListingPage({
       params: Promise.resolve({ id: MOCK_LISTING.id }),

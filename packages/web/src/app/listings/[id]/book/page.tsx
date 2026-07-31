@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { displayFont } from '@/app/_components/fonts';
 import { ListingSummaryCard } from '@/app/_components/ListingSummaryCard';
-import { fetchListing } from '@/lib/api';
+import { fetchListing, fetchSession } from '@/lib/api';
+import { carryDatesAndGuests } from '@/lib/utils';
 import { BookingForm } from './_components/BookingForm';
 
 type BookListingPageProps = {
@@ -31,6 +32,16 @@ export async function generateMetadata({
 export default async function BookListingPage({ params, searchParams }: BookListingPageProps) {
   const { id } = await params;
   const { checkIn, checkOut, guests } = await searchParams;
+
+  // Checked before fetchListing, not after: a signed-out customer shouldn't
+  // pay for a listing lookup on a page they're about to be redirected away
+  // from. carryDatesAndGuests (shared with Search/Listing Detail's own
+  // "Book now" links) preserves the in-progress selection across the detour.
+  const session = await fetchSession();
+  if (!session) {
+    const bookingPath = `/listings/${id}/book${carryDatesAndGuests({ checkIn, checkOut, guests })}`;
+    redirect(`/sign-in?redirect=${encodeURIComponent(bookingPath)}`);
+  }
 
   // Dates are only meaningful (and only valid per the API's Zod schema) when
   // supplied together, mirroring Listing Detail's own treatment of a lone

@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CreateBookingSchema, type CreateBooking } from '@travel-booking/core';
+import { ClientCreateBookingSchema, type ClientCreateBooking } from '@travel-booking/core';
 import { startTransition, useActionState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { displayFont } from '@/app/_components/fonts';
@@ -42,7 +42,7 @@ export function BookingForm({ listingId, maxGuests, checkIn, checkOut, guests }:
   // layered on here, scoped to this listing.
   const schema = useMemo(
     () =>
-      CreateBookingSchema.refine((data) => data.guests <= maxGuests, {
+      ClientCreateBookingSchema.refine((data) => data.guests <= maxGuests, {
         message: `This listing sleeps up to ${maxGuests} guests.`,
         path: ['guests'],
       }),
@@ -53,7 +53,7 @@ export function BookingForm({ listingId, maxGuests, checkIn, checkOut, guests }:
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<CreateBooking>({
+  } = useForm<ClientCreateBooking>({
     resolver: zodResolver(schema),
     defaultValues: { listingId, checkIn, checkOut, guests: guests ?? 1 },
   });
@@ -64,7 +64,7 @@ export function BookingForm({ listingId, maxGuests, checkIn, checkOut, guests }:
   // Bypassing the action/formAction prop also means React no longer wraps
   // the dispatch in a transition automatically, so startTransition is
   // required here to keep `pending` updating correctly.
-  function onValid(values: CreateBooking) {
+  function onValid(values: ClientCreateBooking) {
     startTransition(() => {
       formAction(values);
     });

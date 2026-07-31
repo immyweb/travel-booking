@@ -1,7 +1,11 @@
+import { like } from 'drizzle-orm';
 import type { Express } from 'express';
 import request from 'supertest';
+import { user } from '../db/auth-schema';
+import type { Db } from '../db/db';
 
 export type TestUser = {
+  id: string;
   email: string;
   password: string;
   name: string;
@@ -38,5 +42,26 @@ export async function signUpTestUser(
     throw new Error(`signUpTestUser failed: ${response.status} ${JSON.stringify(response.body)}`);
   }
 
-  return { email, password, name, cookie };
+  return { id: response.body.user.id, email, password, name, cookie };
+}
+
+// For test files where every seeded booking shares one account (the test
+// exercises something other than who a booking belongs to — availability,
+// an EXCLUDE constraint, etc.) — signs up once under a marker email domain
+// unique to the caller, and returns a cleanup callback to run in `afterAll`.
+// Matches the marker-domain pattern signUpTestUser's own callers use
+// per-test, just scoped to the whole file instead.
+export async function signUpSharedTestUser(
+  app: Express,
+  db: Db,
+  emailDomain: string,
+): Promise<{ userId: string; cleanup: () => Promise<void> }> {
+  const { id } = await signUpTestUser(app, { email: `booker@${emailDomain}` });
+
+  return {
+    userId: id,
+    cleanup: async () => {
+      await db.delete(user).where(like(user.email, `%@${emailDomain}`));
+    },
+  };
 }

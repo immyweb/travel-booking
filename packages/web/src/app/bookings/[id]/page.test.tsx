@@ -44,6 +44,7 @@ const MOCK_LISTING: ListingDetail = {
 const MOCK_BOOKING: Booking = {
   id: 'booking-1',
   listingId: MOCK_LISTING.id,
+  userId: 'user-1',
   checkIn: '2026-08-05',
   checkOut: '2026-08-10',
   guests: 2,

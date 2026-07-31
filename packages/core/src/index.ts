@@ -22,5 +22,5 @@ export type {
 export { AvailabilitySchema, ListingDetailSchema, ListingQuerySchema } from './listings';
 export type { Availability, ListingDetail, ListingQuery } from './listings';
 
-export { BookingSchema, CreateBookingSchema } from './bookings';
-export type { Booking, CreateBooking } from './bookings';
+export { BookingSchema, ClientCreateBookingSchema, CreateBookingSchema } from './bookings';
+export type { Booking, ClientCreateBooking, CreateBooking } from './bookings';

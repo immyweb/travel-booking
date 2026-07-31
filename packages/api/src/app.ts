@@ -53,7 +53,7 @@ export function createApp({ db, logger, mailer, webAppUrl, auth }: AppDependenci
 
   app.use(createSearchRouter(db));
   app.use(createListingsRouter(db));
-  app.use(createBookingsRouter({ db, mailer, logger, webAppUrl }));
+  app.use(createBookingsRouter({ db, mailer, logger, webAppUrl, auth }));
 
   // Order is load-bearing: every route first, then the 404 fallback for
   // anything unmatched, then the error seam last so both can reach it.

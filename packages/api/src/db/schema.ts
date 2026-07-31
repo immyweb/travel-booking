@@ -26,6 +26,8 @@ const geographyPoint = customType<{ data: GeographyPoint; driverData: string }>(
   },
 });
 
+import { user } from './auth-schema';
+
 export * from './auth-schema';
 
 export const amenityEnum = pgEnum('amenity', AMENITIES);
@@ -59,6 +61,11 @@ export const bookings = pgTable(
     listingId: uuid('listing_id')
       .notNull()
       .references(() => listings.id),
+    // text, not uuid — Better Auth generates its own string ids for `user`
+    // (see auth-schema.ts), not uuids like the rest of this table's ids.
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id),
     checkIn: date('check_in', { mode: 'string' }).notNull(),
     checkOut: date('check_out', { mode: 'string' }).notNull(),
     guestName: text('guest_name').notNull(),
@@ -67,5 +74,8 @@ export const bookings = pgTable(
     totalPrice: integer('total_price').notNull(),
     currency: varchar('currency', { length: 3 }).notNull(),
   },
-  (table) => [index('bookings_listing_id_idx').on(table.listingId)],
+  (table) => [
+    index('bookings_listing_id_idx').on(table.listingId),
+    index('bookings_user_id_idx').on(table.userId),
+  ],
 );

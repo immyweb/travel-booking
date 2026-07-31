@@ -1,14 +1,33 @@
 import type { Amenity } from '@travel-booking/core';
 import { eq, inArray } from 'drizzle-orm';
 import request from 'supertest';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { bookings, listings } from '../../db/schema';
 import { createTestContext } from '../../test-support/context';
+import { signUpSharedTestUser } from '../../test-support/auth';
 
 const { app, db } = createTestContext();
 
 // Isolated from real curated/seed data by a marker country no seed listing uses.
 const TEST_COUNTRY = 'Testland';
+
+// Signed up once in beforeAll, not afterEach-cleaned, since every seeded
+// booking in this file shares one account — these tests exercise Search's
+// availability filtering, not who a booking belongs to.
+let testUserId: string;
+let cleanupTestUser: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ userId: testUserId, cleanup: cleanupTestUser } = await signUpSharedTestUser(
+    app,
+    db,
+    'search-routes-test.example',
+  ));
+});
+
+afterAll(async () => {
+  await cleanupTestUser();
+});
 
 // London-ish centroid; offsets below use ~111.32km per degree of latitude.
 const CENTER = { lat: 51.5074, lng: -0.1278 };
@@ -45,6 +64,7 @@ async function seedListing(overrides: {
 async function seedBooking(listingId: string, checkIn: string, checkOut: string) {
   await db.insert(bookings).values({
     listingId,
+    userId: testUserId,
     checkIn,
     checkOut,
     guestName: 'Existing Guest',

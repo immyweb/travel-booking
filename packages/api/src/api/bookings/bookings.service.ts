@@ -2,6 +2,7 @@ import type { Booking, CreateBooking } from '@travel-booking/core';
 import { eq } from 'drizzle-orm';
 import { SQL } from 'bun';
 import { ApiError } from '../../errors/errors';
+import type { Auth } from '../../auth/auth';
 import type { Db } from '../../db/db';
 import type { Logger } from '../../logging/logger';
 import type { Mailer } from '../../mailer/mailer';
@@ -20,6 +21,7 @@ export type CreateBookingDependencies = {
   mailer: Mailer;
   logger: Logger;
   webAppUrl: string;
+  auth: Auth;
 };
 
 function toBooking(row: typeof bookings.$inferSelect): Booking {
@@ -58,6 +60,7 @@ export async function createBooking(
       .insert(bookings)
       .values({
         listingId: input.listingId,
+        userId: input.userId,
         checkIn: input.checkIn,
         checkOut: input.checkOut,
         guestName: input.guestName,
