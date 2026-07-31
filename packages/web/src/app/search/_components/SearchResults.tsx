@@ -45,7 +45,6 @@ export function SearchResults({ results, checkIn, checkOut, guests }: SearchResu
           >
             <Link
               href={listingHref(listing.id)}
-              target="_blank"
               data-active={activeId === listing.id}
               className="group flex gap-3 rounded-xl p-3 ring-1 ring-azulejo/10 transition hover:bg-limestone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-terracotta data-[active=true]:bg-limestone data-[active=true]:ring-2 data-[active=true]:ring-terracotta/60"
             >
