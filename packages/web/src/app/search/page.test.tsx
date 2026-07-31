@@ -1,8 +1,9 @@
 import type { CityCentroid, SearchResponse } from '@travel-booking/core';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactNode } from 'react';
 import { act } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchCities, fetchSearchResults } from '@/lib/api';
 import SearchPage from './page';
 
@@ -20,6 +21,15 @@ vi.mock('next/navigation', () => ({
 // under Vitest, so next/font/google resolves to no usable export here.
 vi.mock('next/font/google', () => ({
   Bricolage_Grotesque: () => ({ className: 'font-display-mock' }),
+}));
+
+// MapLibre GL JS renders to a WebGL <canvas>, which jsdom can't provide —
+// stand in with plain DOM elements so pin content/clicks stay assertable.
+vi.mock('react-map-gl/maplibre', () => ({
+  Map: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  Marker: ({ children, onClick }: { children?: ReactNode; onClick?: () => void }) => (
+    <div onClick={onClick}>{children}</div>
+  ),
 }));
 
 const MOCK_CITIES: CityCentroid[] = [
@@ -323,5 +333,52 @@ describe('SearchPage', () => {
     expect(pushMock).toHaveBeenCalledWith(
       '/search?city=Paris&country=France&checkIn=2026-08-05&amenities=wifi',
     );
+  });
+});
+
+describe('SearchPage — search results map', () => {
+  beforeEach(() => {
+    // useIsDesktop reads this on mount; only rendered here, so the map (and
+    // its code-split bundle) mounts only in these desktop-viewport tests.
+    vi.spyOn(window, 'matchMedia').mockReturnValue({
+      matches: true,
+      media: '(min-width: 768px)',
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    } as unknown as MediaQueryList);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders a pin for each result, alongside its list row', async () => {
+    const ui = await SearchPage({ searchParams: Promise.resolve({}) });
+    await act(async () => {
+      render(ui);
+    });
+
+    const map = within(await screen.findByTestId('search-results-map'));
+    for (const listing of MOCK_SEARCH_RESPONSE.results) {
+      expect(await map.findByText(`${listing.price} ${listing.currency}`)).toBeInTheDocument();
+    }
+  });
+
+  it('opens the listing in a new tab when its pin is clicked, like its list row', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const user = userEvent.setup();
+    const ui = await SearchPage({ searchParams: Promise.resolve({}) });
+    await act(async () => {
+      render(ui);
+    });
+
+    const map = within(await screen.findByTestId('search-results-map'));
+    await user.click(await map.findByText('82 EUR'));
+
+    expect(openSpy).toHaveBeenCalledWith('/listings/listing-1', '_blank', 'noopener,noreferrer');
   });
 });

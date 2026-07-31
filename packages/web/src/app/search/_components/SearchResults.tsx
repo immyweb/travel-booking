@@ -1,11 +1,12 @@
 'use client';
 
 import type { ListingSummary } from '@travel-booking/core';
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
-import { TileMark } from '@/app/_components/TileMark';
+import { useState } from 'react';
 import { carryDatesAndGuests } from '@/lib/utils';
+import { useIsDesktop } from '@/hooks/useIsDesktop';
 
 type SearchResultsProps = {
   results: ListingSummary[];
@@ -14,45 +15,17 @@ type SearchResultsProps = {
   guests?: number;
 };
 
-type MapPosition = { left: string; top: string };
-
-// Static regardless of props/state (the literal "map tiles" backdrop) —
-// hoisted so hovering a listing, which re-renders this component for its
-// activeId state, doesn't reconstruct these 60 SVG nodes every time.
-const MAP_TILE_TEXTURE = (
-  <div className="absolute inset-0 grid grid-cols-10 gap-8 p-4 text-azulejo opacity-[0.07]">
-    {Array.from({ length: 60 }, (_, index) => (
-      <TileMark key={index} className="size-6" />
-    ))}
-  </div>
+// Code-split so its bundle (MapLibre GL JS) is only ever fetched when a
+// desktop viewport is actually going to render it — see the `isDesktop`
+// check below, which also prevents this from mounting at all on mobile.
+const SearchResultsMap = dynamic(
+  () => import('./SearchResultsMap').then((mod) => mod.SearchResultsMap),
+  { ssr: false },
 );
-
-// Places listings inside a padded 0-100% box based on their coordinate
-// spread — a static stand-in for real map projection/tiles (out of scope
-// for v1, see the search-results-display prototype decision).
-function placeOnMap(results: ListingSummary[]): Record<string, MapPosition> {
-  const lats = results.map((result) => result.coordinates.latitude);
-  const lngs = results.map((result) => result.coordinates.longitude);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-
-  const positions: Record<string, MapPosition> = {};
-  for (const result of results) {
-    const xRatio = (result.coordinates.longitude - minLng) / (maxLng - minLng || 1);
-    const yRatio = (result.coordinates.latitude - minLat) / (maxLat - minLat || 1);
-    positions[result.id] = {
-      left: `${10 + xRatio * 80}%`,
-      top: `${10 + (1 - yRatio) * 80}%`,
-    };
-  }
-  return positions;
-}
 
 export function SearchResults({ results, checkIn, checkOut, guests }: SearchResultsProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
-  const positions = useMemo(() => placeOnMap(results), [results]);
+  const isDesktop = useIsDesktop();
 
   // Carries the guest's selected dates/guest count forward from Search so the
   // Listing Detail page can reflect them (same params Search's own filter
@@ -103,25 +76,17 @@ export function SearchResults({ results, checkIn, checkOut, guests }: SearchResu
       </ol>
       <div
         aria-hidden="true"
+        data-testid="search-results-map"
         className="relative hidden flex-1 overflow-hidden bg-gradient-to-br from-azulejo-light/10 via-limestone to-gold/10 md:block"
       >
-        {MAP_TILE_TEXTURE}
-        {results.map((listing) => {
-          const position = positions[listing.id];
-          if (!position) return null;
-          return (
-            <div
-              key={listing.id}
-              style={{ left: position.left, top: position.top }}
-              data-active={activeId === listing.id}
-              onMouseEnter={() => setActiveId(listing.id)}
-              onMouseLeave={() => setActiveId((id) => (id === listing.id ? null : id))}
-              className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-terracotta px-2.5 py-1 text-xs font-semibold text-white shadow-md ring-2 ring-white/70 transition data-[active=true]:scale-110"
-            >
-              {listing.price} {listing.currency}
-            </div>
-          );
-        })}
+        {isDesktop && (
+          <SearchResultsMap
+            results={results}
+            activeId={activeId}
+            onHoverChange={setActiveId}
+            getHref={listingHref}
+          />
+        )}
       </div>
     </div>
   );
