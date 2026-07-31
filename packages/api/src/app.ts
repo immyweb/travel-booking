@@ -1,5 +1,7 @@
+import { toNodeHandler } from 'better-auth/node';
 import express, { type Express } from 'express';
 import pinoHttp from 'pino-http';
+import type { Auth } from './auth/auth';
 import type { Db } from './db/db';
 import type { Logger } from './logging/logger';
 import type { Mailer } from './mailer/mailer';
@@ -13,11 +15,12 @@ export type AppDependencies = {
   logger: Logger;
   mailer: Mailer;
   webAppUrl: string;
+  auth: Auth;
 };
 
 // The api's composition root: every slice is mounted here, and everything the
 // app needs arrives as an argument. Nothing in this file reads the environment.
-export function createApp({ db, logger, mailer, webAppUrl }: AppDependencies): Express {
+export function createApp({ db, logger, mailer, webAppUrl, auth }: AppDependencies): Express {
   const app = express();
 
   // First, so every request — including ones that never reach a route — gets
@@ -35,7 +38,13 @@ export function createApp({ db, logger, mailer, webAppUrl }: AppDependencies): E
     }),
   );
 
-  // Only write route so far (POST /bookings) needs a parsed JSON body.
+  // Better Auth owns request parsing for its own routes and must be mounted
+  // before express.json() — parsing the body first leaves nothing for
+  // Better Auth's handler to read, and its client hangs on "pending".
+  app.all('/api/auth/*splat', toNodeHandler(auth));
+
+  // Only write routes (POST /bookings, and Better Auth's own routes above)
+  // need a parsed JSON body.
   app.use(express.json());
 
   app.get('/health', (_req, res) => {

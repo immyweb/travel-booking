@@ -12,11 +12,20 @@ import {
   type SearchQuery,
   type SearchResponse,
 } from '@travel-booking/core';
+import { cookies } from 'next/headers';
+import { z } from 'zod';
 
 // Internal Next.js -> Express connection (ADR-0002): Express stays the
 // single source of truth for data access, so SSR pages fetch over HTTP
 // rather than reading the database directly.
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
+
+// This app's own origin. Better Auth's endpoints reject any cookie-bearing
+// request whose Origin doesn't match its trustedOrigins (see api/src/auth/auth.ts)
+// — real browser requests never reach Better Auth directly (it's mounted in
+// Express, not Next), so every server-to-server call here sets this
+// explicitly rather than relying on a browser to supply it.
+const SITE_URL = process.env.SITE_URL ?? 'http://localhost:3000';
 
 // The api replies with one error envelope for every non-2xx (see
 // api/src/http/errors.ts). safeParse, because an error from a proxy or load
@@ -130,4 +139,164 @@ export async function fetchBooking(id: string): Promise<Booking | null> {
   }
 
   return BookingSchema.parse(await response.json());
+}
+
+// Better Auth's own REST endpoints (mounted in Express — see ADR-0002 and
+// api/src/auth/auth.ts) reply with a flat `{ code, message }` on failure, not
+// this app's own `{ error: { message } }` envelope, so it needs its own
+// parser rather than reusing errorMessageFrom.
+const BetterAuthErrorSchema = z.object({ message: z.string() });
+
+async function betterAuthErrorMessageFrom(response: Response, fallback: string): Promise<string> {
+  const body: unknown = await response.json().catch(() => null);
+  const parsed = BetterAuthErrorSchema.safeParse(body);
+  return parsed.success ? parsed.data.message : fallback;
+}
+
+type ParsedSetCookie = {
+  name: string;
+  value: string;
+  options: {
+    path?: string;
+    maxAge?: number;
+    httpOnly?: boolean;
+    secure?: boolean;
+    sameSite?: 'lax' | 'strict' | 'none';
+  };
+};
+
+function parseSetCookie(raw: string): ParsedSetCookie {
+  const [pair, ...attributes] = raw.split(';').map((part) => part.trim());
+  const separatorIndex = pair!.indexOf('=');
+  const name = pair!.slice(0, separatorIndex);
+  const value = pair!.slice(separatorIndex + 1);
+
+  const options: ParsedSetCookie['options'] = {};
+  for (const attribute of attributes) {
+    const [rawKey, rawValue] = attribute.split('=');
+    switch (rawKey!.toLowerCase()) {
+      case 'path':
+        options.path = rawValue;
+        break;
+      case 'max-age':
+        options.maxAge = Number(rawValue);
+        break;
+      case 'httponly':
+        options.httpOnly = true;
+        break;
+      case 'secure':
+        options.secure = true;
+        break;
+      case 'samesite':
+        options.sameSite = rawValue!.toLowerCase() as 'lax' | 'strict' | 'none';
+        break;
+    }
+  }
+
+  return { name, value, options };
+}
+
+// Better Auth's session cookie(s) (there can be more than one — sign-out
+// clears three at once) arrive as raw Set-Cookie headers on the fetch
+// Response, which cookies().set() can't take directly; each is parsed and
+// re-set individually onto Next's own outgoing response.
+async function forwardSetCookies(response: Response): Promise<void> {
+  const store = await cookies();
+  for (const raw of response.headers.getSetCookie()) {
+    const { name, value, options } = parseSetCookie(raw);
+    store.set(name, value, options);
+  }
+}
+
+async function currentCookieHeader(): Promise<string> {
+  const store = await cookies();
+  return store
+    .getAll()
+    .map((cookie) => `${cookie.name}=${cookie.value}`)
+    .join('; ');
+}
+
+export type AuthActionResult = { ok: true } | { ok: false; message: string };
+
+export async function signUp(input: {
+  name: string;
+  email: string;
+  password: string;
+}): Promise<AuthActionResult> {
+  const response = await fetch(`${API_URL}/api/auth/sign-up/email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Origin: SITE_URL },
+    body: JSON.stringify(input),
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      message: await betterAuthErrorMessageFrom(response, 'Could not create your account.'),
+    };
+  }
+
+  await forwardSetCookies(response);
+  return { ok: true };
+}
+
+export async function signIn(input: {
+  email: string;
+  password: string;
+}): Promise<AuthActionResult> {
+  const response = await fetch(`${API_URL}/api/auth/sign-in/email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Origin: SITE_URL },
+    body: JSON.stringify(input),
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      message: await betterAuthErrorMessageFrom(response, 'Invalid email or password.'),
+    };
+  }
+
+  await forwardSetCookies(response);
+  return { ok: true };
+}
+
+export async function signOut(): Promise<void> {
+  const response = await fetch(`${API_URL}/api/auth/sign-out`, {
+    method: 'POST',
+    headers: { Cookie: await currentCookieHeader(), Origin: SITE_URL },
+    cache: 'no-store',
+  });
+
+  if (response.ok) {
+    await forwardSetCookies(response);
+  }
+}
+
+const SessionUserSchema = z.object({ id: z.string(), name: z.string(), email: z.string() });
+export type SessionUser = z.infer<typeof SessionUserSchema>;
+
+// Next's own fetch doesn't attach the browser's cookies to a server-issued
+// request the way a browser-issued one would, so the incoming request's
+// Cookie header is read and forwarded explicitly here.
+export async function fetchSession(): Promise<SessionUser | null> {
+  const response = await fetch(`${API_URL}/api/auth/get-session`, {
+    headers: { Cookie: await currentCookieHeader(), Origin: SITE_URL },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `GET /api/auth/get-session failed with status ${response.status}: ${await betterAuthErrorMessageFrom(response, response.statusText)}`,
+    );
+  }
+
+  const body: unknown = await response.json();
+  if (!body) {
+    return null;
+  }
+
+  return SessionUserSchema.parse((body as { user: unknown }).user);
 }

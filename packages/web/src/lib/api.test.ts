@@ -12,15 +12,36 @@ import {
   fetchCities,
   fetchListing,
   fetchSearchResults,
+  fetchSession,
+  signIn,
+  signOut,
+  signUp,
 } from '@/lib/api';
 
 const fetchMock = vi.fn();
 
-// Only the four members lib/api.ts actually reads, so the stub can't drift into
+const cookieStore = {
+  set: vi.fn(),
+  getAll: vi.fn((): { name: string; value: string }[] => []),
+};
+
+// next/headers only works inside a real request scope, which vitest never
+// provides — every lib/api.ts function that reads/writes cookies goes through
+// this fake store instead.
+vi.mock('next/headers', () => ({
+  cookies: vi.fn(async () => cookieStore),
+}));
+
+// Only the members lib/api.ts actually reads, so the stub can't drift into
 // asserting things about undici's Response that we don't depend on.
 function stubResponse(
   body: unknown,
-  init: { status?: number; statusText?: string; unparseable?: boolean } = {},
+  init: {
+    status?: number;
+    statusText?: string;
+    unparseable?: boolean;
+    setCookie?: string[];
+  } = {},
 ) {
   const status = init.status ?? 200;
 
@@ -28,6 +49,7 @@ function stubResponse(
     ok: status >= 200 && status < 300,
     status,
     statusText: init.statusText ?? '',
+    headers: { getSetCookie: () => init.setCookie ?? [] },
     json: async () => {
       if (init.unparseable) {
         throw new Error('not json');
@@ -76,6 +98,8 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   fetchMock.mockReset();
+  cookieStore.set.mockClear();
+  cookieStore.getAll.mockReset().mockReturnValue([]);
 });
 
 describe('fetchCities', () => {
@@ -352,5 +376,167 @@ describe('fetchBooking', () => {
     fetchMock.mockResolvedValue(stubResponse({ id: BOOKING.id }));
 
     await expect(fetchBooking(BOOKING.id)).rejects.toThrow();
+  });
+});
+
+const SESSION_COOKIE =
+  'better-auth.session_token=abc123; Max-Age=604800; Path=/; HttpOnly; SameSite=Lax';
+
+describe('signUp', () => {
+  it('forwards the Set-Cookie header onto the outgoing response on success', async () => {
+    fetchMock.mockResolvedValue(
+      stubResponse({ user: { id: 'u1' } }, { setCookie: [SESSION_COOKIE] }),
+    );
+
+    await expect(
+      signUp({ name: 'Jane Doe', email: 'jane@example.com', password: 'password123' }),
+    ).resolves.toEqual({ ok: true });
+
+    expect(cookieStore.set).toHaveBeenCalledExactlyOnceWith('better-auth.session_token', 'abc123', {
+      path: '/',
+      maxAge: 604800,
+      httpOnly: true,
+      sameSite: 'lax',
+    });
+  });
+
+  it('POSTs the input to Better Auth with an Origin header, and sets no cookie', async () => {
+    fetchMock.mockResolvedValue(stubResponse({ user: { id: 'u1' } }));
+
+    await signUp({ name: 'Jane Doe', email: 'jane@example.com', password: 'password123' });
+
+    const call = fetchMock.mock.calls[0]!;
+    expect(call[0]).toBe('http://localhost:4000/api/auth/sign-up/email');
+    expect(call[1]).toMatchObject({ method: 'POST', headers: { Origin: 'http://localhost:3000' } });
+    expect(JSON.parse(call[1].body)).toEqual({
+      name: 'Jane Doe',
+      email: 'jane@example.com',
+      password: 'password123',
+    });
+    expect(cookieStore.set).not.toHaveBeenCalled();
+  });
+
+  it("returns the api's own message for an already-registered email, rather than throwing", async () => {
+    fetchMock.mockResolvedValue(
+      stubResponse(
+        { message: 'User already exists. Use another email.', code: 'USER_ALREADY_EXISTS' },
+        { status: 422 },
+      ),
+    );
+
+    await expect(
+      signUp({ name: 'Jane Doe', email: 'jane@example.com', password: 'password123' }),
+    ).resolves.toEqual({ ok: false, message: 'User already exists. Use another email.' });
+  });
+
+  it('falls back to a generic message when the failure body has no message', async () => {
+    fetchMock.mockResolvedValue(stubResponse(null, { status: 500, unparseable: true }));
+
+    await expect(
+      signUp({ name: 'Jane Doe', email: 'jane@example.com', password: 'password123' }),
+    ).resolves.toEqual({ ok: false, message: 'Could not create your account.' });
+  });
+});
+
+describe('signIn', () => {
+  it('forwards the Set-Cookie header onto the outgoing response on success', async () => {
+    fetchMock.mockResolvedValue(
+      stubResponse({ user: { id: 'u1' } }, { setCookie: [SESSION_COOKIE] }),
+    );
+
+    await expect(signIn({ email: 'jane@example.com', password: 'password123' })).resolves.toEqual({
+      ok: true,
+    });
+
+    expect(cookieStore.set).toHaveBeenCalledExactlyOnceWith('better-auth.session_token', 'abc123', {
+      path: '/',
+      maxAge: 604800,
+      httpOnly: true,
+      sameSite: 'lax',
+    });
+  });
+
+  it('returns the same message for a wrong password as an unregistered email', async () => {
+    fetchMock.mockResolvedValue(
+      stubResponse(
+        { message: 'Invalid email or password', code: 'INVALID_EMAIL_OR_PASSWORD' },
+        { status: 401 },
+      ),
+    );
+
+    await expect(signIn({ email: 'jane@example.com', password: 'wrong' })).resolves.toEqual({
+      ok: false,
+      message: 'Invalid email or password',
+    });
+  });
+});
+
+describe('signOut', () => {
+  it('forwards the current session cookie to the api, then re-sets the cleared cookies it returns', async () => {
+    cookieStore.getAll.mockReturnValue([{ name: 'better-auth.session_token', value: 'abc123' }]);
+    fetchMock.mockResolvedValue(
+      stubResponse(
+        { success: true },
+        { setCookie: ['better-auth.session_token=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax'] },
+      ),
+    );
+
+    await signOut();
+
+    const call = fetchMock.mock.calls[0]!;
+    expect(call[0]).toBe('http://localhost:4000/api/auth/sign-out');
+    expect(call[1]).toMatchObject({
+      method: 'POST',
+      headers: {
+        Cookie: 'better-auth.session_token=abc123',
+        Origin: 'http://localhost:3000',
+      },
+    });
+    expect(cookieStore.set).toHaveBeenCalledExactlyOnceWith('better-auth.session_token', '', {
+      path: '/',
+      maxAge: 0,
+      httpOnly: true,
+      sameSite: 'lax',
+    });
+  });
+});
+
+describe('fetchSession', () => {
+  it('returns the signed-in user, forwarding the current cookies as the Cookie header', async () => {
+    cookieStore.getAll.mockReturnValue([{ name: 'better-auth.session_token', value: 'abc123' }]);
+    fetchMock.mockResolvedValue(
+      stubResponse({
+        session: { id: 's1' },
+        user: { id: 'u1', name: 'Jane Doe', email: 'jane@example.com' },
+      }),
+    );
+
+    await expect(fetchSession()).resolves.toEqual({
+      id: 'u1',
+      name: 'Jane Doe',
+      email: 'jane@example.com',
+    });
+
+    const call = fetchMock.mock.calls[0]!;
+    expect(call[0]).toBe('http://localhost:4000/api/auth/get-session');
+    expect(call[1]).toMatchObject({
+      headers: { Cookie: 'better-auth.session_token=abc123', Origin: 'http://localhost:3000' },
+    });
+  });
+
+  it('returns null when signed out, rather than throwing', async () => {
+    fetchMock.mockResolvedValue(stubResponse(null));
+
+    await expect(fetchSession()).resolves.toBeNull();
+  });
+
+  it('surfaces the message from the api error envelope for a failure', async () => {
+    fetchMock.mockResolvedValue(
+      stubResponse({ message: 'Internal Server Error' }, { status: 500 }),
+    );
+
+    await expect(fetchSession()).rejects.toThrow(
+      'GET /api/auth/get-session failed with status 500: Internal Server Error',
+    );
   });
 });

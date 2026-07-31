@@ -1,5 +1,6 @@
 import type { Express } from 'express';
 import { createApp } from '../app';
+import { createAuth, type Auth } from '../auth/auth';
 import { configFromEnv } from '../config/config';
 import { createDb, type Db } from '../db/db';
 import { createLogger } from '../logging/logger';
@@ -9,6 +10,7 @@ export type TestContext = {
   app: Express;
   db: Db;
   mailer: FakeMailer;
+  auth: Auth;
 };
 
 // Wires the app exactly as index.ts does, so tests exercise the real
@@ -21,10 +23,17 @@ export function createTestContext(): TestContext {
   const db = createDb(config.db.url);
   const logger = createLogger(config.log.level);
   const mailer = createFakeMailer();
+  const auth = createAuth({
+    db,
+    secret: config.auth.secret,
+    baseUrl: config.auth.baseUrl,
+    webAppUrl: config.webAppUrl,
+  });
 
   return {
-    app: createApp({ db, logger, mailer, webAppUrl: config.mailer.webAppUrl }),
+    app: createApp({ db, logger, mailer, webAppUrl: config.webAppUrl, auth }),
     db,
     mailer,
+    auth,
   };
 }

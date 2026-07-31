@@ -1,4 +1,5 @@
 import { createApp } from './app';
+import { createAuth } from './auth/auth';
 import { configFromEnv } from './config/config';
 import { createDb } from './db/db';
 import { createLogger } from './logging/logger';
@@ -10,7 +11,13 @@ const config = configFromEnv();
 const db = createDb(config.db.url);
 const logger = createLogger(config.log.level);
 const mailer = createResendMailer(config.mailer.resendApiKey);
-const app = createApp({ db, logger, mailer, webAppUrl: config.mailer.webAppUrl });
+const auth = createAuth({
+  db,
+  secret: config.auth.secret,
+  baseUrl: config.auth.baseUrl,
+  webAppUrl: config.webAppUrl,
+});
+const app = createApp({ db, logger, mailer, webAppUrl: config.webAppUrl, auth });
 
 app.listen(config.server.port, () => {
   logger.info(`API listening on http://localhost:${config.server.port}`);

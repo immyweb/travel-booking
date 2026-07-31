@@ -26,6 +26,8 @@ const geographyPoint = customType<{ data: GeographyPoint; driverData: string }>(
   },
 });
 
+export * from './auth-schema';
+
 export const amenityEnum = pgEnum('amenity', AMENITIES);
 
 export const listings = pgTable(

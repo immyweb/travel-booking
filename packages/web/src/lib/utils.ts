@@ -6,6 +6,17 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Guards the `redirect` query param sign-in/sign-up accept: only an in-app
+// path is followed after auth succeeds, never an absolute URL or a
+// protocol-relative "//host" — both would let an attacker redirect a
+// freshly authenticated session off-site.
+export function toInternalPath(path: string | undefined): string {
+  if (!path || !path.startsWith('/') || path.startsWith('//')) {
+    return '/';
+  }
+  return path;
+}
+
 // Shared by the Search amenities filter and the Listing Detail amenity list,
 // so both render the exact same labels from one implementation.
 export function amenityLabel(amenity: Amenity): string {

@@ -4,7 +4,13 @@ export type Config = {
   db: { url: string };
   server: { port: number };
   log: { level: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent' };
-  mailer: { resendApiKey: string; webAppUrl: string };
+  // Where the web app lives — used both to build the confirmation link in a
+  // booking email (mailer) and as the one Origin Better Auth trusts on a
+  // cookie-bearing request (auth), so it lives at the top level rather than
+  // nested under either one.
+  webAppUrl: string;
+  mailer: { resendApiKey: string };
+  auth: { secret: string; baseUrl: string };
 };
 
 const envSchema = z.object({
@@ -18,6 +24,12 @@ const envSchema = z.object({
   }),
   // Builds the confirmation link inside the booking confirmation email.
   WEB_APP_URL: z.url().default('http://localhost:3000'),
+  BETTER_AUTH_SECRET: z.string({
+    error: 'BETTER_AUTH_SECRET is not set — required to sign session cookies',
+  }),
+  // Better Auth's own view of where it's mounted — used to derive the
+  // secure-cookie flag and to build any absolute links it generates.
+  API_BASE_URL: z.url().default('http://localhost:4000'),
 });
 
 // The one place this package reads process.env. Entry points call it once;
@@ -29,6 +41,8 @@ export function configFromEnv(): Config {
     db: { url: env.DATABASE_URL },
     server: { port: env.PORT },
     log: { level: env.LOG_LEVEL },
-    mailer: { resendApiKey: env.RESEND_API_KEY, webAppUrl: env.WEB_APP_URL },
+    webAppUrl: env.WEB_APP_URL,
+    mailer: { resendApiKey: env.RESEND_API_KEY },
+    auth: { secret: env.BETTER_AUTH_SECRET, baseUrl: env.API_BASE_URL },
   };
 }
