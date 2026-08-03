@@ -91,18 +91,12 @@ Key technologies:
 
 Run from the repo root:
 
-| Command             | Description                                                  |
-| ------------------- | ------------------------------------------------------------ |
-| `bun run dev`       | Run web + API together                                       |
-| `bun run dev:web`   | Run only the Next.js app                                     |
-| `bun run dev:api`   | Run only the Express API                                     |
-| `bun run test`      | Run tests for all packages                                   |
-| `bun run typecheck` | Type-check all packages                                      |
-| `bun run lint`      | Lint the whole repo                                          |
-| `bun run format`    | Format the whole repo with Prettier                          |
-| `bun run db:up`     | Start the Postgres/PostGIS container                         |
-| `bun run db:down`   | Stop the database container                                  |
-| `bun run db:reset`  | Recreate the database container from scratch (drops volumes) |
+| Command           | Description                |
+| ----------------- | -------------------------- |
+| `bun run dev`     | Run web + API together     |
+| `bun run dev:web` | Run only the Next.js app   |
+| `bun run dev:api` | Run only the Express API   |
+| `bun run test`    | Run tests for all packages |
 
 Package-specific commands (run from `packages/api`):
 
