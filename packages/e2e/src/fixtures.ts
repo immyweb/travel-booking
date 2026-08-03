@@ -3,7 +3,7 @@ import { bookings, listings, user } from '@travel-booking/api/src/db/schema.ts';
 import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { test as base } from '@playwright/test';
+import { expect, test as base, type Page } from '@playwright/test';
 
 // A real listing/user pair, isolated per test by a title/email unique to
 // this run — same "own marker data, not the global seed" convention
@@ -41,7 +41,11 @@ function connectDb() {
 // same reasoning as connectDb above, and it means fixture setup exercises
 // the exact endpoint the browser itself would hit, same as
 // packages/api/src/test-support/auth.ts's signUpTestUser.
-async function signUpUser(user: { email: string; password: string; name: string }) {
+async function signUpUser(user: {
+  email: string;
+  password: string;
+  name: string;
+}): Promise<string> {
   const response = await fetch('http://localhost:4000/api/auth/sign-up/email', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:3000' },
@@ -50,11 +54,57 @@ async function signUpUser(user: { email: string; password: string; name: string 
   if (!response.ok) {
     throw new Error(`sign-up/email failed: ${response.status} ${await response.text()}`);
   }
+
+  const body: { user: { id: string } } = await response.json();
+  return body.user.id;
+}
+
+// Fills and submits the Sign In form — shared by every test that signs in,
+// whether it landed there via the app's own auth-gate redirect (already on
+// the page) or navigated straight there with `gotoSignIn` below.
+export async function signIn(
+  page: Page,
+  credentials: { email: string; password: string },
+): Promise<void> {
+  await page.getByLabel('Email').fill(credentials.email);
+  await page.getByLabel('Password').fill(credentials.password);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+}
+
+// Navigates directly to Sign In with an in-progress booking path preserved
+// as `redirect` — the same query param shape the app's own auth gate
+// produces (see listings/[id]/book/page.tsx), for tests that don't need to
+// re-drive the search/listing-detail navigation that produces it naturally.
+export async function gotoSignIn(page: Page, redirectPath: string): Promise<void> {
+  await page.goto(`/sign-in?redirect=${encodeURIComponent(redirectPath)}`);
+}
+
+// Asserts the inline form error's text. Scoped to `form`, not `page` — both
+// the Sign In and Booking forms render their error as a `role="alert"` `<p>`
+// inside the `<form>`, but Next.js's own route announcer div also has
+// role="alert", which an unscoped getByRole would ambiguously match.
+export async function expectFormAlert(page: Page, text: string): Promise<void> {
+  await expect(page.locator('form').getByRole('alert')).toHaveText(text);
+}
+
+// Inserts a booking row directly — bypassing the real create-booking flow —
+// for tests that need a pre-existing booking already in place (e.g. to
+// trigger a real overlap conflict) without expressing this schema's shape
+// by hand at each call site.
+export async function seedBooking(
+  db: ReturnType<typeof connectDb>,
+  booking: typeof bookings.$inferInsert,
+): Promise<void> {
+  await db.insert(bookings).values(booking);
 }
 
 export type BookingJourneyFixture = {
   listing: { id: string; title: string; price: number; currency: string; maxGuests: number };
-  user: { email: string; password: string; name: string };
+  user: { id: string; email: string; password: string; name: string };
+  // Exposes the same connection already open for fixture setup/teardown, so
+  // tests that need to seed rows directly (e.g. a pre-existing booking to
+  // trigger a real overlap conflict) don't need a second connection.
+  db: ReturnType<typeof connectDb>;
 };
 
 export const test = base.extend<{ bookingJourney: BookingJourneyFixture }>({
@@ -86,11 +136,12 @@ export const test = base.extend<{ bookingJourney: BookingJourneyFixture }>({
       throw new Error('bookingJourney fixture: listing insert returned no row');
     }
 
-    await signUpUser({ email: userEmail, password, name: userName });
+    const userId = await signUpUser({ email: userEmail, password, name: userName });
 
     await use({
       listing: { id: listing.id, title: listing.title, price: 120, currency: 'EUR', maxGuests: 3 },
-      user: { email: userEmail, password, name: userName },
+      user: { id: userId, email: userEmail, password, name: userName },
+      db,
     });
 
     // Bookings reference listings/users with a plain FK (no ON DELETE
@@ -103,4 +154,4 @@ export const test = base.extend<{ bookingJourney: BookingJourneyFixture }>({
   },
 });
 
-export { expect } from '@playwright/test';
+export { expect };
