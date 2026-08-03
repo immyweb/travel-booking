@@ -136,7 +136,7 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    expect(screen.getByRole('combobox', { name: 'Where to?' })).toHaveTextContent('Paris, France');
+    expect(screen.getByRole('combobox', { name: /Where to\?/ })).toHaveTextContent('Paris, France');
   });
 
   it('updates the URL when a different city is picked', async () => {
@@ -146,7 +146,7 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    await user.click(screen.getByRole('combobox', { name: 'Where to?' }));
+    await user.click(screen.getByRole('combobox', { name: /Where to\?/ }));
     await user.click(await screen.findByRole('option', { name: 'Lisbon, Portugal' }));
 
     expect(pushMock).toHaveBeenCalledWith('/search?city=Lisbon&country=Portugal');
@@ -164,7 +164,7 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    await user.click(screen.getByRole('combobox', { name: 'Where to?' }));
+    await user.click(screen.getByRole('combobox', { name: /Where to\?/ }));
     await user.click(await screen.findByRole('option', { name: 'Lisbon, Portugal' }));
 
     expect(pushMock).toHaveBeenCalledWith(
@@ -242,7 +242,7 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    await user.click(screen.getByRole('combobox', { name: 'Where to?' }));
+    await user.click(screen.getByRole('combobox', { name: /Where to\?/ }));
     await user.click(await screen.findByRole('option', { name: 'Lisbon, Portugal' }));
 
     expect(pushMock).toHaveBeenCalledWith('/search?city=Lisbon&country=Portugal&guests=4');
@@ -316,7 +316,7 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    await user.click(screen.getByRole('combobox', { name: 'Where to?' }));
+    await user.click(screen.getByRole('combobox', { name: /Where to\?/ }));
     await user.click(await screen.findByRole('option', { name: 'Lisbon, Portugal' }));
 
     expect(pushMock).toHaveBeenCalledWith('/search?city=Lisbon&country=Portugal&amenities=wifi');

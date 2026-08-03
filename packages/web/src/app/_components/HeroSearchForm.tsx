@@ -52,10 +52,16 @@ export function HeroSearchForm({ cities }: HeroSearchFormProps) {
       className="grid w-full grid-cols-1 gap-4 rounded-2xl bg-white p-5 text-left text-foreground shadow-2xl shadow-black/20 ring-1 ring-black/5 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_0.8fr_auto] lg:items-end lg:gap-3"
     >
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="hero-city">Where to?</Label>
+        <Label id="hero-city-label" htmlFor="hero-city">
+          Where to?
+        </Label>
         <Select value={selectedKey} onValueChange={setSelectedKey} disabled={cities.length === 0}>
-          <SelectTrigger id="hero-city" className="w-full">
-            <SelectValue placeholder="Choose a destination" />
+          <SelectTrigger
+            id="hero-city"
+            aria-labelledby="hero-city-label hero-city-value"
+            className="w-full"
+          >
+            <SelectValue id="hero-city-value" placeholder="Choose a destination" />
           </SelectTrigger>
           <SelectContent>
             {cities.map((city) => (

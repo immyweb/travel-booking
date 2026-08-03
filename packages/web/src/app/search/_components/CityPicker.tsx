@@ -37,7 +37,9 @@ export function CityPicker({
 
   return (
     <div className="flex flex-col gap-1">
-      <Label htmlFor="city-picker">Where to?</Label>
+      <Label id="city-picker-label" htmlFor="city-picker">
+        Where to?
+      </Label>
       <Select
         value={cityKey(selectedCity)}
         onValueChange={(value) => {
@@ -54,8 +56,12 @@ export function CityPicker({
           );
         }}
       >
-        <SelectTrigger id="city-picker" className="w-56">
-          <SelectValue placeholder="Where to?" />
+        <SelectTrigger
+          id="city-picker"
+          aria-labelledby="city-picker-label city-picker-value"
+          className="w-56"
+        >
+          <SelectValue id="city-picker-value" placeholder="Where to?" />
         </SelectTrigger>
         <SelectContent>
           {cities.map((city) => (
