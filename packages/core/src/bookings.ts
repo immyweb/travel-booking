@@ -67,3 +67,13 @@ export const BookingSchema = z.object({
   currency: z.string(),
 });
 export type Booking = z.infer<typeof BookingSchema>;
+
+// POST /bookings' outcome as the web client discriminates it: 'conflict' is
+// the #16 EXCLUDE constraint rejecting overlapping dates (409); 'invalid'
+// covers both a missing/expired session (401) and server-side validation
+// (400, e.g. guests over the listing's maxGuests) — both re-render the
+// booking form rather than being treated as failures.
+export type CreateBookingResult =
+  | { ok: true; booking: Booking }
+  | { ok: false; reason: 'conflict' }
+  | { ok: false; reason: 'invalid'; message: string };

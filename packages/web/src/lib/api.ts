@@ -1,19 +1,23 @@
 import {
   BookingSchema,
   CitiesResponseSchema,
-  ErrorResponseSchema,
   ListingDetailSchema,
   SearchResponseSchema,
+  SessionUserSchema,
   toSearchParams,
+  type AuthActionResult,
   type Booking,
   type CityCentroid,
   type ClientCreateBooking,
+  type CreateBookingResult,
   type ListingDetail,
   type SearchQuery,
   type SearchResponse,
+  type SessionUser,
 } from '@travel-booking/core';
-import { cookies } from 'next/headers';
 import { z } from 'zod';
+import { currentCookieHeader, forwardSetCookies } from '@/lib/cookies';
+import { betterAuthErrorMessageFrom, errorMessageFrom, failed } from '@/lib/errors';
 
 // Internal Next.js -> Express connection (ADR-0002): Express stays the
 // single source of truth for data access, so SSR pages fetch over HTTP
@@ -26,22 +30,6 @@ const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 // Express, not Next), so every server-to-server call here sets this
 // explicitly rather than relying on a browser to supply it.
 const SITE_URL = process.env.SITE_URL ?? 'http://localhost:3000';
-
-// The api replies with one error envelope for every non-2xx (see
-// api/src/http/errors.ts). safeParse, because an error from a proxy or load
-// balancer won't be in our envelope. Shared by `failed()` (which throws) and
-// any caller that needs the message without throwing, like createBooking's
-// 400 branch.
-async function errorMessageFrom(response: Response, fallback: string): Promise<string> {
-  const body: unknown = await response.json().catch(() => null);
-  const parsed = ErrorResponseSchema.safeParse(body);
-  return parsed.success ? parsed.data.error.message : fallback;
-}
-
-async function failed(route: string, response: Response): Promise<never> {
-  const detail = await errorMessageFrom(response, response.statusText);
-  throw new Error(`${route} failed with status ${response.status}: ${detail}`);
-}
 
 export async function fetchSearchResults(query: SearchQuery): Promise<SearchResponse> {
   const response = await fetch(`${API_URL}/search?${toSearchParams(query).toString()}`, {
@@ -88,11 +76,6 @@ export async function fetchListing(
 
   return ListingDetailSchema.parse(await response.json());
 }
-
-export type CreateBookingResult =
-  | { ok: true; booking: Booking }
-  | { ok: false; reason: 'conflict' }
-  | { ok: false; reason: 'invalid'; message: string };
 
 // 401, 409 and 400 are all expected outcomes the booking form re-renders
 // around rather than failures: 401 means the session cookie is missing/
@@ -167,83 +150,6 @@ export async function fetchMyBookings(): Promise<Booking[]> {
   return z.array(BookingSchema).parse(await response.json());
 }
 
-// Better Auth's own REST endpoints (mounted in Express — see ADR-0002 and
-// api/src/auth/auth.ts) reply with a flat `{ code, message }` on failure, not
-// this app's own `{ error: { message } }` envelope, so it needs its own
-// parser rather than reusing errorMessageFrom.
-const BetterAuthErrorSchema = z.object({ message: z.string() });
-
-async function betterAuthErrorMessageFrom(response: Response, fallback: string): Promise<string> {
-  const body: unknown = await response.json().catch(() => null);
-  const parsed = BetterAuthErrorSchema.safeParse(body);
-  return parsed.success ? parsed.data.message : fallback;
-}
-
-type ParsedSetCookie = {
-  name: string;
-  value: string;
-  options: {
-    path?: string;
-    maxAge?: number;
-    httpOnly?: boolean;
-    secure?: boolean;
-    sameSite?: 'lax' | 'strict' | 'none';
-  };
-};
-
-function parseSetCookie(raw: string): ParsedSetCookie {
-  const [pair, ...attributes] = raw.split(';').map((part) => part.trim());
-  const separatorIndex = pair!.indexOf('=');
-  const name = pair!.slice(0, separatorIndex);
-  const value = pair!.slice(separatorIndex + 1);
-
-  const options: ParsedSetCookie['options'] = {};
-  for (const attribute of attributes) {
-    const [rawKey, rawValue] = attribute.split('=');
-    switch (rawKey!.toLowerCase()) {
-      case 'path':
-        options.path = rawValue;
-        break;
-      case 'max-age':
-        options.maxAge = Number(rawValue);
-        break;
-      case 'httponly':
-        options.httpOnly = true;
-        break;
-      case 'secure':
-        options.secure = true;
-        break;
-      case 'samesite':
-        options.sameSite = rawValue!.toLowerCase() as 'lax' | 'strict' | 'none';
-        break;
-    }
-  }
-
-  return { name, value, options };
-}
-
-// Better Auth's session cookie(s) (there can be more than one — sign-out
-// clears three at once) arrive as raw Set-Cookie headers on the fetch
-// Response, which cookies().set() can't take directly; each is parsed and
-// re-set individually onto Next's own outgoing response.
-async function forwardSetCookies(response: Response): Promise<void> {
-  const store = await cookies();
-  for (const raw of response.headers.getSetCookie()) {
-    const { name, value, options } = parseSetCookie(raw);
-    store.set(name, value, options);
-  }
-}
-
-async function currentCookieHeader(): Promise<string> {
-  const store = await cookies();
-  return store
-    .getAll()
-    .map((cookie) => `${cookie.name}=${cookie.value}`)
-    .join('; ');
-}
-
-export type AuthActionResult = { ok: true } | { ok: false; message: string };
-
 export async function signUp(input: {
   name: string;
   email: string;
@@ -300,9 +206,6 @@ export async function signOut(): Promise<void> {
     await forwardSetCookies(response);
   }
 }
-
-const SessionUserSchema = z.object({ id: z.string(), name: z.string(), email: z.string() });
-export type SessionUser = z.infer<typeof SessionUserSchema>;
 
 // Next's own fetch doesn't attach the browser's cookies to a server-issued
 // request the way a browser-issued one would, so the incoming request's
