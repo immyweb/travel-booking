@@ -1,0 +1,11 @@
+# Better Auth is mounted in Express, not Next.js
+
+Better Auth's handler is mounted in `packages/api`'s Express app (`/api/auth/*`), not in the Next.js app, even though Better Auth ships first-class Next.js route handler support and most of its own docs assume that setup. This keeps Express the single source of truth for all data access (ADR-0002) — auth data (users, sessions) is data like any other, and a second system able to read/write it directly from Next.js would undercut that boundary the same way a direct-to-Postgres SSR read would.
+
+The cost is that the session cookie Better Auth issues is scoped to the API's origin, not the browser-facing site's — a real cross-origin split in production (separate Next.js and Express hosts/subdomains), even though both currently run on `localhost` in dev. Rather than a Next.js `rewrites()` proxy or cross-subdomain cookie/CORS configuration, the browser is kept from ever talking to Better Auth directly: every auth operation (`signUp`, `signIn`, `signOut`, `fetchSession` in `lib/api.ts`) is a server-side call from a Next.js Server Action or Server Component, which forwards the incoming request's `Cookie` header to Express and sets an explicit `Origin` header matching Better Auth's `trustedOrigins`. The `Set-Cookie` header on Express's response is parsed and re-set onto Next's own outgoing response via `cookies().set(...)`. From the browser's point of view the cookie was always same-origin, since it never sees Express at all.
+
+## Considered Options
+
+- **Mount Better Auth in Next.js** (its default-supported setup): rejected — would make Next.js a second source of truth for auth data, alongside Express for everything else, splitting ADR-0002's boundary for one feature.
+- **`next.config.ts` `rewrites()` proxying `/api/auth/:path*` to Express**, so the browser talks to Better Auth through the same origin at the network level: considered, but not needed once every call site is already server-side — the manual cookie-forwarding `lib/api.ts` does achieves the same same-origin outcome without adding a proxy layer.
+- **Cross-subdomain cookies + CORS**, calling Better Auth cross-origin directly from the browser: rejected as more moving parts (CORS config, `SameSite=None` + `Secure`, shared cookie domain) for the same outcome.
