@@ -1,0 +1,22 @@
+{
+  "name": "@travel-booking/e2e",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "bun --env-file=../../.env playwright test",
+    "test:ui": "bun --env-file=../../.env playwright test --ui",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@travel-booking/api": "workspace:*",
+    "@travel-booking/core": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "postgres": "^3.4.9"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/bun": "latest",
+    "@types/node": "^20"
+  }
+}

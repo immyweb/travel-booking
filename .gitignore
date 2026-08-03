@@ -3,6 +3,10 @@ dist
 .next
 build
 coverage
+test-results
+playwright-report
+blob-report
+playwright/.cache
 .DS_Store
 *.log
 next-env.d.ts

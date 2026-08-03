@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    // "dom" is needed here for the same reason packages/core's own tsconfig
+    // adds it (see its comment): this program transitively type-checks
+    // core/src/search.ts (via @travel-booking/api's own core import), whose
+    // URLSearchParams usage is declared in lib.dom, not lib.es2022.
+    "lib": ["ES2022", "dom"],
+    "types": ["node", "bun"]
+  },
+  "include": ["playwright.config.ts", "src", "tests"]
+}
