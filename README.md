@@ -4,11 +4,12 @@ A travel booking site where users search listings, view details, and make bookin
 
 ## Architecture
 
-This is a Bun workspaces monorepo with three packages:
+This is a Bun workspaces monorepo with four packages:
 
 - **`packages/web`** — Next.js 16 app (App Router). Renders search, listing, booking, and account pages, and calls the API over an internal connection for all data access.
 - **`packages/api`** — Express app, the single source of truth for data access (see [ADR 0002](./docs/adr/0002-express-as-single-source-of-truth.md)). Owns the Postgres database, auth, pricing, and transactional email.
 - **`packages/core`** — Shared types/contracts (Zod schemas) used by both `web` and `api`.
+- **`packages/e2e`** — Playwright end-to-end tests covering the booking journey against real `web`/`api`/Postgres instances. A separate package rather than living inside `web`, since its fixtures need to reach into `api`'s own DB/auth internals (see [ADR 0006](./docs/adr/0006-e2e-tests-as-separate-package.md)).
 
 Key technologies:
 
@@ -20,6 +21,7 @@ Key technologies:
 - [Resend](https://resend.com) + React Email — transactional email
 - [MapLibre GL](https://maplibre.org) / `react-map-gl` — maps, tiles fetched directly by the browser (see [ADR 0004](./docs/adr/0004-map-tiles-fetched-directly-by-browser.md))
 - [Vitest](https://vitest.dev) — testing for both `web` and `api`
+- [Playwright](https://playwright.dev) — end-to-end tests in `packages/e2e`
 - [Zod](https://zod.dev) — schema validation shared via `core`
 
 ## Prerequisites
@@ -106,6 +108,16 @@ Package-specific commands (run from `packages/api`):
 | `bun run db:migrate`  | Apply migrations                   |
 | `bun run db:seed`     | Seed the database with sample data |
 | `bun run db:studio`   | Open Drizzle Studio                |
+
+## End-to-end tests
+
+`packages/e2e` runs Playwright against real `web`/`api`/Postgres instances — it builds and starts both apps itself, but expects Postgres already running with migrations and seed data applied (steps 3–4 of [Setup](#setup)).
+
+```sh
+bun run --filter='@travel-booking/e2e' test
+```
+
+`bun run test` from the repo root runs this alongside every other package's tests.
 
 ## Project docs
 
