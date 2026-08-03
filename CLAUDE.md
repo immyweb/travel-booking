@@ -2,7 +2,7 @@
 
 ### Issue tracker
 
-Issues live as GitHub Issues (github.com/immyweb/travel-booking). The GitHub MCP server is available and preferred; the `gh` CLI is the fallback. See `docs/agents/issue-tracker.md`.
+Issues live as GitHub Issues (github.com/immyweb/travel-booking). Use the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
 ### Domain docs
 
