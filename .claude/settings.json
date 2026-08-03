@@ -36,5 +36,10 @@
   "enabledPlugins": {
     "accesslint@accesslint": true,
     "mattpocock-skills@mattpocock": true
+  },
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
   }
 }
