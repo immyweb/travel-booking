@@ -89,6 +89,7 @@ describe('MyBookingsPage', () => {
     expect(link).toHaveAttribute('href', `/bookings/${MOCK_BOOKING.id}`);
     expect(link).toHaveTextContent('2026-08-05 – 2026-08-10 · 5 nights');
     expect(link).toHaveTextContent('410 EUR total');
+    expect(screen.getByText('1 stay')).toBeInTheDocument();
   });
 
   it('lists multiple bookings', async () => {
@@ -99,5 +100,6 @@ describe('MyBookingsPage', () => {
     render(ui);
 
     expect(screen.getAllByRole('link', { name: /Doe|Smith/ })).toHaveLength(2);
+    expect(screen.getByText('2 stays')).toBeInTheDocument();
   });
 });
