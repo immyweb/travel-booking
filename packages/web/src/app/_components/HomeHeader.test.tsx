@@ -46,7 +46,8 @@ describe('HomeHeader', () => {
 
     render(await HomeHeader());
 
-    expect(screen.getByText(/signed in as jane doe/i)).toBeInTheDocument();
+    expect(screen.getByText(/welcome back,/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Jane Doe' })).toHaveAttribute('href', '/my-bookings');
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Sign in' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Sign up' })).not.toBeInTheDocument();

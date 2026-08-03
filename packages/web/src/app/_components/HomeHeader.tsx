@@ -21,7 +21,10 @@ export async function HomeHeader() {
           {session ? (
             <>
               <span className="hidden text-sm text-white/80 sm:inline">
-                Signed in as {session.name}
+                Welcome back,{' '}
+                <Link href="/my-bookings" className="font-medium text-white hover:underline">
+                  {session.name}
+                </Link>
               </span>
               <form action={submitSignOut}>
                 <Button
