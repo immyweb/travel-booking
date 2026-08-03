@@ -101,6 +101,8 @@ export default async function BookListingPage({ params, searchParams }: BookList
           checkIn={hasDateRange ? checkIn : undefined}
           checkOut={hasDateRange ? checkOut : undefined}
           guests={hasGuestCount ? requestedGuests : undefined}
+          guestName={session.name}
+          guestEmail={session.email}
         />
       </div>
     </main>

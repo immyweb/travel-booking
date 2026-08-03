@@ -16,6 +16,8 @@ type BookingFormProps = {
   checkIn?: string;
   checkOut?: string;
   guests?: number;
+  guestName?: string;
+  guestEmail?: string;
 };
 
 const initialState: BookingFormState = null;
@@ -33,7 +35,15 @@ const FIELD_ORDER = [
   'guestEmail',
 ] as const;
 
-export function BookingForm({ listingId, maxGuests, checkIn, checkOut, guests }: BookingFormProps) {
+export function BookingForm({
+  listingId,
+  maxGuests,
+  checkIn,
+  checkOut,
+  guests,
+  guestName,
+  guestEmail,
+}: BookingFormProps) {
   const [state, formAction, pending] = useActionState(submitBooking, initialState);
   const hasDateRange = Boolean(checkIn && checkOut);
 
@@ -55,7 +65,17 @@ export function BookingForm({ listingId, maxGuests, checkIn, checkOut, guests }:
     formState: { errors },
   } = useForm<ClientCreateBooking>({
     resolver: zodResolver(schema),
-    defaultValues: { listingId, checkIn, checkOut, guests: guests ?? 1 },
+    // guestName/guestEmail default to the signed-in User's own details, but
+    // stay editable — the Guest a booking is for isn't always the User
+    // making it (see CONTEXT.md).
+    defaultValues: {
+      listingId,
+      checkIn,
+      checkOut,
+      guests: guests ?? 1,
+      guestName: guestName ?? '',
+      guestEmail: guestEmail ?? '',
+    },
   });
 
   // useActionState's dispatcher isn't only for <form action>: it can be

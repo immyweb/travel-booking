@@ -16,19 +16,19 @@ vi.mock('next/font/google', () => ({
 
 const LISTING_ID = '11111111-1111-4111-8111-111111111111';
 
+// The signed-in User's own name/email, as passed down from the booking
+// page's session lookup — the common case is booking for yourself, so most
+// tests render with these already prefilled rather than typing them in.
+const SIGNED_IN_USER = { guestName: 'Jane Doe', guestEmail: 'jane@example.com' };
+
 beforeEach(() => {
   vi.mocked(submitBooking).mockClear();
   vi.mocked(submitBooking).mockResolvedValue(null);
 });
 
-async function fillContactFields(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(screen.getByLabelText('Full name'), 'Jane Doe');
-  await user.type(screen.getByLabelText('Email'), 'jane@example.com');
-}
-
 describe('BookingForm', () => {
   it('renders editable date and guest inputs when none were carried forward', () => {
-    render(<BookingForm listingId={LISTING_ID} maxGuests={4} />);
+    render(<BookingForm listingId={LISTING_ID} maxGuests={4} {...SIGNED_IN_USER} />);
 
     expect(screen.getByLabelText('Check-in')).toBeInTheDocument();
     expect(screen.getByLabelText('Check-out')).toBeInTheDocument();
@@ -43,12 +43,57 @@ describe('BookingForm', () => {
         checkIn="2026-08-05"
         checkOut="2026-08-10"
         guests={2}
+        {...SIGNED_IN_USER}
       />,
     );
 
     expect(screen.queryByLabelText('Check-in')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Guests')).not.toBeInTheDocument();
     expect(screen.getByText('2 guests')).toBeInTheDocument();
+  });
+
+  it("prefills the Guest fields with the signed-in User's own name and email", () => {
+    render(
+      <BookingForm
+        listingId={LISTING_ID}
+        maxGuests={4}
+        checkIn="2026-08-05"
+        checkOut="2026-08-10"
+        guests={2}
+        {...SIGNED_IN_USER}
+      />,
+    );
+
+    expect(screen.getByLabelText('Full name')).toHaveValue(SIGNED_IN_USER.guestName);
+    expect(screen.getByLabelText('Email')).toHaveValue(SIGNED_IN_USER.guestEmail);
+  });
+
+  it('allows overwriting the prefilled contact details to book for someone else', async () => {
+    const user = userEvent.setup();
+    render(
+      <BookingForm
+        listingId={LISTING_ID}
+        maxGuests={4}
+        checkIn="2026-08-05"
+        checkOut="2026-08-10"
+        guests={2}
+        {...SIGNED_IN_USER}
+      />,
+    );
+
+    const nameInput = screen.getByLabelText('Full name');
+    const emailInput = screen.getByLabelText('Email');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'John Smith');
+    await user.clear(emailInput);
+    await user.type(emailInput, 'john@example.com');
+
+    await user.click(screen.getByRole('button', { name: 'Confirm booking' }));
+
+    expect(submitBooking).toHaveBeenCalledWith(
+      null,
+      expect.objectContaining({ guestName: 'John Smith', guestEmail: 'john@example.com' }),
+    );
   });
 
   it('blocks submission and shows an inline error when the name is missing', async () => {
@@ -60,9 +105,9 @@ describe('BookingForm', () => {
         checkIn="2026-08-05"
         checkOut="2026-08-10"
         guests={2}
+        guestEmail={SIGNED_IN_USER.guestEmail}
       />,
     );
-    await user.type(screen.getByLabelText('Email'), 'jane@example.com');
 
     await user.click(screen.getByRole('button', { name: 'Confirm booking' }));
 
@@ -79,9 +124,9 @@ describe('BookingForm', () => {
         checkIn="2026-08-05"
         checkOut="2026-08-10"
         guests={2}
+        guestName={SIGNED_IN_USER.guestName}
       />,
     );
-    await user.type(screen.getByLabelText('Full name'), 'Jane Doe');
     await user.type(screen.getByLabelText('Email'), 'not-an-email');
 
     await user.click(screen.getByRole('button', { name: 'Confirm booking' }));
@@ -92,13 +137,12 @@ describe('BookingForm', () => {
 
   it('blocks submission and shows an inline error when guests exceed maxGuests', async () => {
     const user = userEvent.setup();
-    render(<BookingForm listingId={LISTING_ID} maxGuests={2} />);
+    render(<BookingForm listingId={LISTING_ID} maxGuests={2} {...SIGNED_IN_USER} />);
     await user.type(screen.getByLabelText('Check-in'), '2026-08-05');
     await user.type(screen.getByLabelText('Check-out'), '2026-08-10');
     const guestsInput = screen.getByLabelText('Guests');
     await user.clear(guestsInput);
     await user.type(guestsInput, '5');
-    await fillContactFields(user);
 
     await user.click(screen.getByRole('button', { name: 'Confirm booking' }));
 
@@ -108,10 +152,9 @@ describe('BookingForm', () => {
 
   it('blocks submission and shows an inline error when checkOut is before checkIn', async () => {
     const user = userEvent.setup();
-    render(<BookingForm listingId={LISTING_ID} maxGuests={4} guests={2} />);
+    render(<BookingForm listingId={LISTING_ID} maxGuests={4} guests={2} {...SIGNED_IN_USER} />);
     await user.type(screen.getByLabelText('Check-in'), '2026-08-10');
     await user.type(screen.getByLabelText('Check-out'), '2026-08-05');
-    await fillContactFields(user);
 
     await user.click(screen.getByRole('button', { name: 'Confirm booking' }));
 
@@ -128,9 +171,9 @@ describe('BookingForm', () => {
         checkIn="2026-08-05"
         checkOut="2026-08-10"
         guests={2}
+        {...SIGNED_IN_USER}
       />,
     );
-    await fillContactFields(user);
 
     await user.click(screen.getByRole('button', { name: 'Confirm booking' }));
 
@@ -149,9 +192,9 @@ describe('BookingForm', () => {
         checkIn="2026-08-05"
         checkOut="2026-08-10"
         guests={2}
+        {...SIGNED_IN_USER}
       />,
     );
-    await fillContactFields(user);
 
     await user.click(screen.getByRole('button', { name: 'Confirm booking' }));
 

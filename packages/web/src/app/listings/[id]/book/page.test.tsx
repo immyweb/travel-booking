@@ -22,6 +22,8 @@ vi.mock('./_components/BookingForm', () => ({
     checkIn?: string;
     checkOut?: string;
     guests?: number;
+    guestName?: string;
+    guestEmail?: string;
   }) => <div data-testid="booking-form">{JSON.stringify(props)}</div>,
 }));
 
@@ -215,6 +217,18 @@ describe('BookListingPage', () => {
 
     const props = JSON.parse(screen.getByTestId('booking-form').textContent!);
     expect(props.guests).toBeUndefined();
+  });
+
+  it("passes the signed-in User's name and email to the form, to prefill the Guest fields", async () => {
+    const ui = await BookListingPage({
+      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      searchParams: Promise.resolve({}),
+    });
+    render(ui);
+
+    const props = JSON.parse(screen.getByTestId('booking-form').textContent!);
+    expect(props.guestName).toBe('Jane Doe');
+    expect(props.guestEmail).toBe('jane@example.com');
   });
 });
 
