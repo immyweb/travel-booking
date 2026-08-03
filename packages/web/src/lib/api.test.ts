@@ -11,6 +11,7 @@ import {
   fetchBooking,
   fetchCities,
   fetchListing,
+  fetchMyBookings,
   fetchSearchResults,
   fetchSession,
   signIn,
@@ -393,6 +394,43 @@ describe('fetchBooking', () => {
     fetchMock.mockResolvedValue(stubResponse({ id: BOOKING.id }));
 
     await expect(fetchBooking(BOOKING.id)).rejects.toThrow();
+  });
+});
+
+describe('fetchMyBookings', () => {
+  it('returns the parsed bookings, forwarding the current session cookie', async () => {
+    cookieStore.getAll.mockReturnValue([{ name: 'better-auth.session_token', value: 'abc123' }]);
+    fetchMock.mockResolvedValue(stubResponse([BOOKING]));
+
+    await expect(fetchMyBookings()).resolves.toEqual([BOOKING]);
+
+    const call = fetchMock.mock.calls[0]!;
+    expect(call[0]).toBe('http://localhost:4000/bookings/mine');
+    expect(call[1]).toMatchObject({
+      headers: expect.objectContaining({ Cookie: 'better-auth.session_token=abc123' }),
+    });
+  });
+
+  it('returns an empty array when the signed-in user has no bookings', async () => {
+    fetchMock.mockResolvedValue(stubResponse([]));
+
+    await expect(fetchMyBookings()).resolves.toEqual([]);
+  });
+
+  it('surfaces the message from the api error envelope for a failure', async () => {
+    fetchMock.mockResolvedValue(
+      stubResponse({ error: { message: 'Unauthorized' } }, { status: 401 }),
+    );
+
+    await expect(fetchMyBookings()).rejects.toThrow(
+      'GET /bookings/mine failed with status 401: Unauthorized',
+    );
+  });
+
+  it('rejects a payload that does not match the contract', async () => {
+    fetchMock.mockResolvedValue(stubResponse([{ id: BOOKING.id }]));
+
+    await expect(fetchMyBookings()).rejects.toThrow();
   });
 });
 

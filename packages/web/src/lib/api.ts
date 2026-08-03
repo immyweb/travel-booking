@@ -150,6 +150,23 @@ export async function fetchBooking(id: string): Promise<Booking | null> {
   return BookingSchema.parse(await response.json());
 }
 
+// Callers gate on fetchSession() first (see app/my-bookings/page.tsx, same
+// pattern as the booking page), so a 401 here would only mean the session
+// expired between that check and this call — rare enough not to need its own
+// handling, unlike createBooking's 401, which a stale form submission hits
+// far more plausibly.
+export async function fetchMyBookings(): Promise<Booking[]> {
+  const response = await fetch(`${API_URL}/bookings/mine`, {
+    headers: { Cookie: await currentCookieHeader() },
+    cache: 'no-store',
+  });
+  if (!response.ok) {
+    await failed('GET /bookings/mine', response);
+  }
+
+  return z.array(BookingSchema).parse(await response.json());
+}
+
 // Better Auth's own REST endpoints (mounted in Express — see ADR-0002 and
 // api/src/auth/auth.ts) reply with a flat `{ code, message }` on failure, not
 // this app's own `{ error: { message } }` envelope, so it needs its own

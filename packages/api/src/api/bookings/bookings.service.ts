@@ -1,5 +1,5 @@
 import type { Booking, CreateBooking } from '@travel-booking/core';
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { SQL } from 'bun';
 import { ApiError } from '../../errors/errors';
 import type { Auth } from '../../auth/auth';
@@ -119,4 +119,16 @@ export async function getBookingById(db: Db, id: string): Promise<Booking | null
   const [row] = await db.select().from(bookings).where(eq(bookings.id, id)).limit(1);
 
   return row ? toBooking(row) : null;
+}
+
+// Soonest check-in first — the most relevant ordering for a customer
+// reviewing their own travel plans on My Bookings.
+export async function getBookingsForUser(db: Db, userId: string): Promise<Booking[]> {
+  const rows = await db
+    .select()
+    .from(bookings)
+    .where(eq(bookings.userId, userId))
+    .orderBy(asc(bookings.checkIn));
+
+  return rows.map(toBooking);
 }

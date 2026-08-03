@@ -316,3 +316,49 @@ describe('GET /bookings/:id', () => {
     expect(response.status).toBe(400);
   });
 });
+
+describe('GET /bookings/mine', () => {
+  it('returns 401 when there is no session', async () => {
+    const response = await request(app).get('/bookings/mine');
+
+    expect(response.status).toBe(401);
+  });
+
+  it('returns an empty array when the signed-in user has no bookings', async () => {
+    const user = await signUpBookingTestUser();
+
+    const response = await request(app).get('/bookings/mine').set('Cookie', user.cookie);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([]);
+  });
+
+  it("returns only the signed-in user's own bookings, not another user's", async () => {
+    const listingId = await seedListing();
+    const user = await signUpBookingTestUser();
+    const otherUser = await signUpBookingTestUser();
+    await seedBooking(listingId, user.id, '2026-08-05', '2026-08-10');
+    await seedBooking(listingId, otherUser.id, '2026-09-01', '2026-09-05');
+
+    const response = await request(app).get('/bookings/mine').set('Cookie', user.cookie);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveLength(1);
+    expect(response.body[0]).toMatchObject({ userId: user.id, checkIn: '2026-08-05' });
+  });
+
+  it('orders bookings by soonest check-in first', async () => {
+    const listingId = await seedListing();
+    const user = await signUpBookingTestUser();
+    await seedBooking(listingId, user.id, '2026-10-01', '2026-10-05');
+    await seedBooking(listingId, user.id, '2026-08-05', '2026-08-10');
+
+    const response = await request(app).get('/bookings/mine').set('Cookie', user.cookie);
+
+    expect(response.status).toBe(200);
+    expect(response.body.map((booking: { checkIn: string }) => booking.checkIn)).toEqual([
+      '2026-08-05',
+      '2026-10-01',
+    ]);
+  });
+});
