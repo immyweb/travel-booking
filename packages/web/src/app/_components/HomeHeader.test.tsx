@@ -1,11 +1,10 @@
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchSession } from '@/lib/api';
+import { http, HttpResponse } from 'msw';
+import { describe, expect, it, vi } from 'vitest';
+import { server } from '@/mocks/server';
 import { HomeHeader } from './HomeHeader';
 
-vi.mock('@/lib/api', () => ({
-  fetchSession: vi.fn(),
-}));
+const API_URL = 'http://localhost:4000';
 
 // The Next.js font loader transform only runs inside Next's own build, not
 // under Vitest, so next/font/google resolves to no usable export here.
@@ -13,13 +12,9 @@ vi.mock('next/font/google', () => ({
   Bricolage_Grotesque: () => ({ className: 'font-display-mock' }),
 }));
 
-beforeEach(() => {
-  vi.mocked(fetchSession).mockReset();
-});
-
 describe('HomeHeader', () => {
   it('renders the wordmark linking home and a search CTA regardless of session state', async () => {
-    vi.mocked(fetchSession).mockResolvedValue(null);
+    server.use(http.get(`${API_URL}/api/auth/get-session`, () => HttpResponse.json(null)));
 
     render(await HomeHeader());
 
@@ -28,7 +23,7 @@ describe('HomeHeader', () => {
   });
 
   it('shows sign-in/sign-up links when signed out', async () => {
-    vi.mocked(fetchSession).mockResolvedValue(null);
+    server.use(http.get(`${API_URL}/api/auth/get-session`, () => HttpResponse.json(null)));
 
     render(await HomeHeader());
 
@@ -38,11 +33,14 @@ describe('HomeHeader', () => {
   });
 
   it('shows the signed-in state and a sign-out control when signed in', async () => {
-    vi.mocked(fetchSession).mockResolvedValue({
-      id: 'u1',
-      name: 'Jane Doe',
-      email: 'jane@example.com',
-    });
+    server.use(
+      http.get(`${API_URL}/api/auth/get-session`, () =>
+        HttpResponse.json({
+          session: { id: 'session-1' },
+          user: { id: 'u1', name: 'Jane Doe', email: 'jane@example.com' },
+        }),
+      ),
+    );
 
     render(await HomeHeader());
 

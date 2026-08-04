@@ -1,12 +1,11 @@
-import type { ListingDetail } from '@travel-booking/core';
 import { render, screen } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchListing } from '@/lib/api';
+import { FIXTURE_LISTING } from '@/mocks/fixtures';
+import { server } from '@/mocks/server';
 import ListingDetailPage, { generateMetadata } from './page';
 
-vi.mock('@/lib/api', () => ({
-  fetchListing: vi.fn(),
-}));
+const API_URL = 'http://localhost:4000';
 
 const notFoundMock = vi.fn(() => {
   // Mirrors next/navigation's real notFound(), which throws to halt
@@ -24,37 +23,19 @@ vi.mock('next/font/google', () => ({
   Bricolage_Grotesque: () => ({ className: 'font-display-mock' }),
 }));
 
-const MOCK_LISTING: ListingDetail = {
-  id: 'listing-1',
-  title: 'Sunny Alfama studio',
-  images: [
-    'https://images.travel-booking.example/1.jpg',
-    'https://images.travel-booking.example/2.jpg',
-  ],
-  price: 82,
-  currency: 'EUR',
-  maxGuests: 4,
-  amenities: ['wifi', 'parking'],
-  city: 'Lisbon',
-  country: 'Portugal',
-  coordinates: { latitude: 38.7127, longitude: -9.1288 },
-  availability: null,
-};
-
 beforeEach(() => {
-  vi.mocked(fetchListing).mockResolvedValue(MOCK_LISTING);
   notFoundMock.mockClear();
 });
 
 describe('ListingDetailPage', () => {
   it("renders the listing's title, price, currency, city, country and guest capacity", async () => {
     const ui = await ListingDetailPage({
-      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      params: Promise.resolve({ id: FIXTURE_LISTING.id }),
       searchParams: Promise.resolve({}),
     });
     render(ui);
 
-    expect(screen.getByRole('heading', { name: MOCK_LISTING.title })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: FIXTURE_LISTING.title })).toBeInTheDocument();
     expect(screen.getByText('Lisbon, Portugal')).toBeInTheDocument();
     expect(screen.getByText('82 EUR', { exact: false })).toBeInTheDocument();
     expect(screen.getByText('Sleeps up to 4 guests')).toBeInTheDocument();
@@ -62,7 +43,7 @@ describe('ListingDetailPage', () => {
 
   it('renders the full amenity list using the shared amenity label formatting', async () => {
     const ui = await ListingDetailPage({
-      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      params: Promise.resolve({ id: FIXTURE_LISTING.id }),
       searchParams: Promise.resolve({}),
     });
     render(ui);
@@ -73,19 +54,23 @@ describe('ListingDetailPage', () => {
 
   it('renders one carousel image per photo, each with distinguishing alt text', async () => {
     const ui = await ListingDetailPage({
-      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      params: Promise.resolve({ id: FIXTURE_LISTING.id }),
       searchParams: Promise.resolve({}),
     });
     render(ui);
 
     const images = screen.getAllByRole('img');
     expect(images).toHaveLength(2);
-    expect(screen.getByAltText(`${MOCK_LISTING.title} — photo 1 of 2`)).toBeInTheDocument();
-    expect(screen.getByAltText(`${MOCK_LISTING.title} — photo 2 of 2`)).toBeInTheDocument();
+    expect(screen.getByAltText(`${FIXTURE_LISTING.title} — photo 1 of 2`)).toBeInTheDocument();
+    expect(screen.getByAltText(`${FIXTURE_LISTING.title} — photo 2 of 2`)).toBeInTheDocument();
   });
 
   it('calls notFound when the listing does not exist', async () => {
-    vi.mocked(fetchListing).mockResolvedValue(null);
+    server.use(
+      http.get(`${API_URL}/listings/:id`, () =>
+        HttpResponse.json({ error: { message: 'Listing not found' } }, { status: 404 }),
+      ),
+    );
 
     await expect(
       ListingDetailPage({
@@ -99,7 +84,7 @@ describe('ListingDetailPage', () => {
 
   it('shows no availability section and an enabled Book now when no dates are in the URL', async () => {
     const ui = await ListingDetailPage({
-      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      params: Promise.resolve({ id: FIXTURE_LISTING.id }),
       searchParams: Promise.resolve({}),
     });
     render(ui);
@@ -109,19 +94,23 @@ describe('ListingDetailPage', () => {
   });
 
   it('shows the dates, nights and total price, and an enabled Book now, when available for the requested dates', async () => {
-    vi.mocked(fetchListing).mockResolvedValue({
-      ...MOCK_LISTING,
-      availability: {
-        checkIn: '2026-08-05',
-        checkOut: '2026-08-10',
-        available: true,
-        nights: 5,
-        totalPrice: 410,
-      },
-    });
+    server.use(
+      http.get(`${API_URL}/listings/:id`, () =>
+        HttpResponse.json({
+          ...FIXTURE_LISTING,
+          availability: {
+            checkIn: '2026-08-05',
+            checkOut: '2026-08-10',
+            available: true,
+            nights: 5,
+            totalPrice: 410,
+          },
+        }),
+      ),
+    );
 
     const ui = await ListingDetailPage({
-      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      params: Promise.resolve({ id: FIXTURE_LISTING.id }),
       searchParams: Promise.resolve({ checkIn: '2026-08-05', checkOut: '2026-08-10' }),
     });
     render(ui);
@@ -137,19 +126,23 @@ describe('ListingDetailPage', () => {
   });
 
   it('shows an unavailable message and a disabled Book now when booked for the requested dates', async () => {
-    vi.mocked(fetchListing).mockResolvedValue({
-      ...MOCK_LISTING,
-      availability: {
-        checkIn: '2026-08-05',
-        checkOut: '2026-08-10',
-        available: false,
-        nights: 5,
-        totalPrice: 410,
-      },
-    });
+    server.use(
+      http.get(`${API_URL}/listings/:id`, () =>
+        HttpResponse.json({
+          ...FIXTURE_LISTING,
+          availability: {
+            checkIn: '2026-08-05',
+            checkOut: '2026-08-10',
+            available: false,
+            nights: 5,
+            totalPrice: 410,
+          },
+        }),
+      ),
+    );
 
     const ui = await ListingDetailPage({
-      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      params: Promise.resolve({ id: FIXTURE_LISTING.id }),
       searchParams: Promise.resolve({ checkIn: '2026-08-05', checkOut: '2026-08-10' }),
     });
     render(ui);
@@ -163,16 +156,20 @@ describe('ListingDetailPage', () => {
 describe('generateMetadata', () => {
   it("sets the page title to the listing's title", async () => {
     const metadata = await generateMetadata({
-      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      params: Promise.resolve({ id: FIXTURE_LISTING.id }),
       searchParams: Promise.resolve({}),
     });
 
-    expect(metadata.title).toBe(MOCK_LISTING.title);
+    expect(metadata.title).toBe(FIXTURE_LISTING.title);
     expect(metadata.description).toEqual(expect.stringContaining('Lisbon'));
   });
 
   it('calls notFound when the listing does not exist', async () => {
-    vi.mocked(fetchListing).mockResolvedValue(null);
+    server.use(
+      http.get(`${API_URL}/listings/:id`, () =>
+        HttpResponse.json({ error: { message: 'Listing not found' } }, { status: 404 }),
+      ),
+    );
 
     await expect(
       generateMetadata({
@@ -185,12 +182,20 @@ describe('generateMetadata', () => {
   });
 
   it('fetches with the same dates as the page, so Next.js can dedupe the two calls into one request', async () => {
+    let requestUrl: URL | undefined;
+    server.use(
+      http.get(`${API_URL}/listings/:id`, ({ request }) => {
+        requestUrl = new URL(request.url);
+        return HttpResponse.json(FIXTURE_LISTING);
+      }),
+    );
+
     await generateMetadata({
-      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      params: Promise.resolve({ id: FIXTURE_LISTING.id }),
       searchParams: Promise.resolve({ checkIn: '2026-08-05', checkOut: '2026-08-10' }),
     });
 
-    expect(fetchListing).toHaveBeenCalledWith(MOCK_LISTING.id, {
+    expect(Object.fromEntries(requestUrl!.searchParams)).toEqual({
       checkIn: '2026-08-05',
       checkOut: '2026-08-10',
     });

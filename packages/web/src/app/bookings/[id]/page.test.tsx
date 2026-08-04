@@ -1,13 +1,11 @@
-import type { Booking, ListingDetail } from '@travel-booking/core';
 import { render, screen } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchBooking, fetchListing } from '@/lib/api';
+import { FIXTURE_BOOKING, FIXTURE_LISTING } from '@/mocks/fixtures';
+import { server } from '@/mocks/server';
 import BookingConfirmationPage, { generateMetadata } from './page';
 
-vi.mock('@/lib/api', () => ({
-  fetchBooking: vi.fn(),
-  fetchListing: vi.fn(),
-}));
+const API_URL = 'http://localhost:4000';
 
 // The Next.js font loader transform only runs inside Next's own build, not
 // under Vitest, so next/font/google resolves to no usable export here.
@@ -24,50 +22,19 @@ vi.mock('next/navigation', () => ({
   notFound: () => notFoundMock(),
 }));
 
-const MOCK_LISTING: ListingDetail = {
-  id: 'listing-1',
-  title: 'Sunny Alfama studio',
-  images: [
-    'https://images.travel-booking.example/1.jpg',
-    'https://images.travel-booking.example/2.jpg',
-  ],
-  price: 82,
-  currency: 'EUR',
-  maxGuests: 4,
-  amenities: ['wifi', 'parking'],
-  city: 'Lisbon',
-  country: 'Portugal',
-  coordinates: { latitude: 38.7127, longitude: -9.1288 },
-  availability: null,
-};
-
-const MOCK_BOOKING: Booking = {
-  id: 'booking-1',
-  listingId: MOCK_LISTING.id,
-  userId: 'user-1',
-  checkIn: '2026-08-05',
-  checkOut: '2026-08-10',
-  guests: 2,
-  guestName: 'Jane Doe',
-  guestEmail: 'jane@example.com',
-  nights: 5,
-  totalPrice: 410,
-  currency: 'EUR',
-};
-
 beforeEach(() => {
-  vi.mocked(fetchBooking).mockReset().mockResolvedValue(MOCK_BOOKING);
-  vi.mocked(fetchListing).mockReset().mockResolvedValue(MOCK_LISTING);
   notFoundMock.mockClear();
 });
 
 describe('BookingConfirmationPage', () => {
   it('renders the listing title, photo, dates, nights, total price, currency, guest name and email', async () => {
-    const ui = await BookingConfirmationPage({ params: Promise.resolve({ id: MOCK_BOOKING.id }) });
+    const ui = await BookingConfirmationPage({
+      params: Promise.resolve({ id: FIXTURE_BOOKING.id }),
+    });
     render(ui);
 
-    expect(screen.getByRole('heading', { name: MOCK_LISTING.title })).toBeInTheDocument();
-    expect(screen.getByAltText(MOCK_LISTING.title)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: FIXTURE_LISTING.title })).toBeInTheDocument();
+    expect(screen.getByAltText(FIXTURE_LISTING.title)).toBeInTheDocument();
     expect(screen.getByText('2026-08-05', { exact: false })).toBeInTheDocument();
     expect(screen.getByText('2026-08-10', { exact: false })).toBeInTheDocument();
     expect(screen.getByText('5 nights', { exact: false })).toBeInTheDocument();
@@ -77,28 +44,56 @@ describe('BookingConfirmationPage', () => {
   });
 
   it("fetches the listing by the booking's listingId", async () => {
-    const ui = await BookingConfirmationPage({ params: Promise.resolve({ id: MOCK_BOOKING.id }) });
+    let requestedId: string | undefined;
+    server.use(
+      http.get(`${API_URL}/listings/:id`, ({ params }) => {
+        requestedId = params.id as string;
+        return HttpResponse.json(FIXTURE_LISTING);
+      }),
+    );
+
+    const ui = await BookingConfirmationPage({
+      params: Promise.resolve({ id: FIXTURE_BOOKING.id }),
+    });
     render(ui);
 
-    expect(fetchListing).toHaveBeenCalledWith(MOCK_LISTING.id);
+    expect(requestedId).toBe(FIXTURE_LISTING.id);
   });
 
   it('calls notFound when no booking matches the id (unknown or malformed)', async () => {
-    vi.mocked(fetchBooking).mockResolvedValue(null);
+    server.use(
+      http.get(`${API_URL}/bookings/:id`, () =>
+        HttpResponse.json({ error: { message: 'Booking not found' } }, { status: 404 }),
+      ),
+    );
+    // The default handler would otherwise silently serve the happy path and
+    // this omission would go unnoticed — wrap it in a spy to prove no request
+    // reached the network boundary at all.
+    const fetchListingSpy = vi.fn();
+    server.use(
+      http.get(`${API_URL}/listings/:id`, () => {
+        fetchListingSpy();
+        return HttpResponse.json(FIXTURE_LISTING);
+      }),
+    );
 
     await expect(
       BookingConfirmationPage({ params: Promise.resolve({ id: 'unknown-id' }) }),
     ).rejects.toThrow();
 
     expect(notFoundMock).toHaveBeenCalled();
-    expect(fetchListing).not.toHaveBeenCalled();
+    expect(fetchListingSpy).not.toHaveBeenCalled();
   });
 
   it('calls notFound when the booking references a listing that no longer exists', async () => {
-    vi.mocked(fetchListing).mockResolvedValue(null);
+    server.use(
+      http.get(`${API_URL}/listings/:id`, () =>
+        HttpResponse.json({ error: { message: 'Listing not found' } }, { status: 404 }),
+      ),
+    );
 
     await expect(
-      BookingConfirmationPage({ params: Promise.resolve({ id: MOCK_BOOKING.id }) }),
+      BookingConfirmationPage({ params: Promise.resolve({ id: FIXTURE_BOOKING.id }) }),
     ).rejects.toThrow();
 
     expect(notFoundMock).toHaveBeenCalled();
@@ -107,7 +102,11 @@ describe('BookingConfirmationPage', () => {
 
 describe('generateMetadata', () => {
   it('calls notFound when no booking matches the id', async () => {
-    vi.mocked(fetchBooking).mockResolvedValue(null);
+    server.use(
+      http.get(`${API_URL}/bookings/:id`, () =>
+        HttpResponse.json({ error: { message: 'Booking not found' } }, { status: 404 }),
+      ),
+    );
 
     await expect(
       generateMetadata({ params: Promise.resolve({ id: 'unknown-id' }) }),

@@ -1,16 +1,15 @@
-import type { CityCentroid, SearchResponse } from '@travel-booking/core';
+import type { SearchResponse } from '@travel-booking/core';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchCities, fetchSearchResults } from '@/lib/api';
+import { FIXTURE_SEARCH_RESPONSE } from '@/mocks/fixtures';
+import { server } from '@/mocks/server';
 import SearchPage from './page';
 
-vi.mock('@/lib/api', () => ({
-  fetchCities: vi.fn(),
-  fetchSearchResults: vi.fn(),
-}));
+const API_URL = 'http://localhost:4000';
 
 const pushMock = vi.fn();
 vi.mock('next/navigation', () => ({
@@ -32,43 +31,12 @@ vi.mock('react-map-gl/maplibre', () => ({
   ),
 }));
 
-const MOCK_CITIES: CityCentroid[] = [
-  { city: 'Lisbon', country: 'Portugal', coordinates: { latitude: 38.7169, longitude: -9.1399 } },
-  { city: 'Paris', country: 'France', coordinates: { latitude: 48.8566, longitude: 2.3522 } },
-];
-
-const MOCK_SEARCH_RESPONSE: SearchResponse = {
-  pagination: { page: 1, size: 12, total: 2, totalPages: 1 },
-  results: [
-    {
-      id: 'listing-1',
-      title: 'Sunny Alfama studio',
-      images: ['https://images.travel-booking.example/1.jpg'],
-      price: 82,
-      currency: 'EUR',
-      coordinates: { latitude: 38.7127, longitude: -9.1288 },
-      distanceKm: 1.2,
-    },
-    {
-      id: 'listing-2',
-      title: 'Belém riverside loft',
-      images: ['https://images.travel-booking.example/2.jpg'],
-      price: 118,
-      currency: 'EUR',
-      coordinates: { latitude: 38.6971, longitude: -9.2033 },
-      distanceKm: 3.4,
-    },
-  ],
-};
-
 const EMPTY_SEARCH_RESPONSE: SearchResponse = {
   pagination: { page: 1, size: 12, total: 0, totalPages: 0 },
   results: [],
 };
 
 beforeEach(() => {
-  vi.mocked(fetchCities).mockResolvedValue(MOCK_CITIES);
-  vi.mocked(fetchSearchResults).mockResolvedValue(MOCK_SEARCH_RESPONSE);
   pushMock.mockClear();
 });
 
@@ -81,7 +49,7 @@ describe('SearchPage', () => {
       render(ui);
     });
 
-    for (const listing of MOCK_SEARCH_RESPONSE.results) {
+    for (const listing of FIXTURE_SEARCH_RESPONSE.results) {
       expect(screen.getByRole('img', { name: listing.title })).toBeInTheDocument();
       expect(screen.getAllByText(`${listing.price} ${listing.currency}`).length).toBeGreaterThan(0);
     }
@@ -120,7 +88,7 @@ describe('SearchPage', () => {
   });
 
   it('renders the empty state when no listings match', async () => {
-    vi.mocked(fetchSearchResults).mockResolvedValue(EMPTY_SEARCH_RESPONSE);
+    server.use(http.get(`${API_URL}/search`, () => HttpResponse.json(EMPTY_SEARCH_RESPONSE)));
 
     const ui = await SearchPage({ searchParams: Promise.resolve({}) });
     await act(async () => {
@@ -363,7 +331,7 @@ describe('SearchPage — search results map', () => {
     });
 
     const map = within(await screen.findByTestId('search-results-map'));
-    for (const listing of MOCK_SEARCH_RESPONSE.results) {
+    for (const listing of FIXTURE_SEARCH_RESPONSE.results) {
       expect(await map.findByText(`${listing.price} ${listing.currency}`)).toBeInTheDocument();
     }
   });

@@ -1,13 +1,11 @@
-import type { ListingDetail } from '@travel-booking/core';
 import { render, screen } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchListing, fetchSession } from '@/lib/api';
+import { FIXTURE_LISTING } from '@/mocks/fixtures';
+import { server } from '@/mocks/server';
 import BookListingPage, { generateMetadata } from './page';
 
-vi.mock('@/lib/api', () => ({
-  fetchListing: vi.fn(),
-  fetchSession: vi.fn(),
-}));
+const API_URL = 'http://localhost:4000';
 
 // The Next.js font loader transform only runs inside Next's own build, not
 // under Vitest, so next/font/google resolves to no usable export here.
@@ -42,57 +40,44 @@ vi.mock('next/navigation', () => ({
   redirect: (path: string) => redirectMock(path),
 }));
 
-const MOCK_LISTING: ListingDetail = {
-  id: 'listing-1',
-  title: 'Sunny Alfama studio',
-  images: [
-    'https://images.travel-booking.example/1.jpg',
-    'https://images.travel-booking.example/2.jpg',
-  ],
-  price: 82,
-  currency: 'EUR',
-  maxGuests: 4,
-  amenities: ['wifi', 'parking'],
-  city: 'Lisbon',
-  country: 'Portugal',
-  coordinates: { latitude: 38.7127, longitude: -9.1288 },
-  availability: null,
-};
-
 beforeEach(() => {
-  vi.mocked(fetchListing).mockResolvedValue(MOCK_LISTING);
-  vi.mocked(fetchSession).mockResolvedValue({
-    id: 'user-1',
-    name: 'Jane Doe',
-    email: 'jane@example.com',
-  });
   notFoundMock.mockClear();
   redirectMock.mockClear();
 });
 
 describe('BookListingPage', () => {
   it('redirects to /sign-in with this page as the redirect param when signed out', async () => {
-    vi.mocked(fetchSession).mockResolvedValue(null);
+    server.use(http.get(`${API_URL}/api/auth/get-session`, () => HttpResponse.json(null)));
+    // The default handler would otherwise silently serve the happy path and
+    // this omission would go unnoticed — wrap it in a spy to prove no request
+    // reached the network boundary at all.
+    const fetchListingSpy = vi.fn();
+    server.use(
+      http.get(`${API_URL}/listings/:id`, () => {
+        fetchListingSpy();
+        return HttpResponse.json(FIXTURE_LISTING);
+      }),
+    );
 
     await expect(
       BookListingPage({
-        params: Promise.resolve({ id: MOCK_LISTING.id }),
+        params: Promise.resolve({ id: FIXTURE_LISTING.id }),
         searchParams: Promise.resolve({}),
       }),
     ).rejects.toThrow('NEXT_REDIRECT');
 
     expect(redirectMock).toHaveBeenCalledWith(
-      `/sign-in?redirect=${encodeURIComponent(`/listings/${MOCK_LISTING.id}/book`)}`,
+      `/sign-in?redirect=${encodeURIComponent(`/listings/${FIXTURE_LISTING.id}/book`)}`,
     );
-    expect(fetchListing).not.toHaveBeenCalled();
+    expect(fetchListingSpy).not.toHaveBeenCalled();
   });
 
   it('preserves checkIn/checkOut/guests in the redirect param when signed out', async () => {
-    vi.mocked(fetchSession).mockResolvedValue(null);
+    server.use(http.get(`${API_URL}/api/auth/get-session`, () => HttpResponse.json(null)));
 
     await expect(
       BookListingPage({
-        params: Promise.resolve({ id: MOCK_LISTING.id }),
+        params: Promise.resolve({ id: FIXTURE_LISTING.id }),
         searchParams: Promise.resolve({
           checkIn: '2026-08-05',
           checkOut: '2026-08-10',
@@ -101,7 +86,7 @@ describe('BookListingPage', () => {
       }),
     ).rejects.toThrow('NEXT_REDIRECT');
 
-    const expectedBookingPath = `/listings/${MOCK_LISTING.id}/book?checkIn=2026-08-05&checkOut=2026-08-10&guests=2`;
+    const expectedBookingPath = `/listings/${FIXTURE_LISTING.id}/book?checkIn=2026-08-05&checkOut=2026-08-10&guests=2`;
     expect(redirectMock).toHaveBeenCalledWith(
       `/sign-in?redirect=${encodeURIComponent(expectedBookingPath)}`,
     );
@@ -109,30 +94,34 @@ describe('BookListingPage', () => {
 
   it('renders normally, with no redirect, when signed in', async () => {
     const ui = await BookListingPage({
-      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      params: Promise.resolve({ id: FIXTURE_LISTING.id }),
       searchParams: Promise.resolve({}),
     });
     render(ui);
 
     expect(redirectMock).not.toHaveBeenCalled();
-    expect(screen.getByRole('heading', { name: MOCK_LISTING.title })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: FIXTURE_LISTING.title })).toBeInTheDocument();
   });
 
   it('renders the listing summary: title, city/country, price and capacity', async () => {
     const ui = await BookListingPage({
-      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      params: Promise.resolve({ id: FIXTURE_LISTING.id }),
       searchParams: Promise.resolve({}),
     });
     render(ui);
 
-    expect(screen.getByRole('heading', { name: MOCK_LISTING.title })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: FIXTURE_LISTING.title })).toBeInTheDocument();
     expect(screen.getByText('Lisbon, Portugal')).toBeInTheDocument();
     expect(screen.getByText(/82 EUR/)).toBeInTheDocument();
     expect(screen.getByText(/Sleeps up to 4 guests/)).toBeInTheDocument();
   });
 
   it('calls notFound when the listing does not exist', async () => {
-    vi.mocked(fetchListing).mockResolvedValue(null);
+    server.use(
+      http.get(`${API_URL}/listings/:id`, () =>
+        HttpResponse.json({ error: { message: 'Listing not found' } }, { status: 404 }),
+      ),
+    );
 
     await expect(
       BookListingPage({
@@ -146,32 +135,36 @@ describe('BookListingPage', () => {
 
   it('passes no carried-forward dates/guests to the form when none are in the URL', async () => {
     const ui = await BookListingPage({
-      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      params: Promise.resolve({ id: FIXTURE_LISTING.id }),
       searchParams: Promise.resolve({}),
     });
     render(ui);
 
     const props = JSON.parse(screen.getByTestId('booking-form').textContent!);
-    expect(props).toMatchObject({ listingId: MOCK_LISTING.id, maxGuests: 4 });
+    expect(props).toMatchObject({ listingId: FIXTURE_LISTING.id, maxGuests: 4 });
     expect(props.checkIn).toBeUndefined();
     expect(props.checkOut).toBeUndefined();
     expect(props.guests).toBeUndefined();
   });
 
   it('shows dates, nights and total price, and carries them to the form, when supplied together', async () => {
-    vi.mocked(fetchListing).mockResolvedValue({
-      ...MOCK_LISTING,
-      availability: {
-        checkIn: '2026-08-05',
-        checkOut: '2026-08-10',
-        available: true,
-        nights: 5,
-        totalPrice: 410,
-      },
-    });
+    server.use(
+      http.get(`${API_URL}/listings/:id`, () =>
+        HttpResponse.json({
+          ...FIXTURE_LISTING,
+          availability: {
+            checkIn: '2026-08-05',
+            checkOut: '2026-08-10',
+            available: true,
+            nights: 5,
+            totalPrice: 410,
+          },
+        }),
+      ),
+    );
 
     const ui = await BookListingPage({
-      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      params: Promise.resolve({ id: FIXTURE_LISTING.id }),
       searchParams: Promise.resolve({ checkIn: '2026-08-05', checkOut: '2026-08-10' }),
     });
     render(ui);
@@ -186,20 +179,28 @@ describe('BookListingPage', () => {
   });
 
   it('does not carry a lone in-progress date through to fetchListing or the form', async () => {
+    let requestUrl: URL | undefined;
+    server.use(
+      http.get(`${API_URL}/listings/:id`, ({ request }) => {
+        requestUrl = new URL(request.url);
+        return HttpResponse.json(FIXTURE_LISTING);
+      }),
+    );
+
     const ui = await BookListingPage({
-      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      params: Promise.resolve({ id: FIXTURE_LISTING.id }),
       searchParams: Promise.resolve({ checkIn: '2026-08-05' }),
     });
     render(ui);
 
-    expect(fetchListing).toHaveBeenCalledWith(MOCK_LISTING.id, undefined);
+    expect(requestUrl!.search).toBe('');
     const props = JSON.parse(screen.getByTestId('booking-form').textContent!);
     expect(props.checkIn).toBeUndefined();
   });
 
   it('carries a valid carried-forward guest count to the form', async () => {
     const ui = await BookListingPage({
-      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      params: Promise.resolve({ id: FIXTURE_LISTING.id }),
       searchParams: Promise.resolve({ guests: '2' }),
     });
     render(ui);
@@ -210,7 +211,7 @@ describe('BookListingPage', () => {
 
   it("does not carry a guest count over the listing's maxGuests", async () => {
     const ui = await BookListingPage({
-      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      params: Promise.resolve({ id: FIXTURE_LISTING.id }),
       searchParams: Promise.resolve({ guests: '99' }),
     });
     render(ui);
@@ -221,7 +222,7 @@ describe('BookListingPage', () => {
 
   it("passes the signed-in User's name and email to the form, to prefill the Guest fields", async () => {
     const ui = await BookListingPage({
-      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      params: Promise.resolve({ id: FIXTURE_LISTING.id }),
       searchParams: Promise.resolve({}),
     });
     render(ui);
@@ -235,15 +236,19 @@ describe('BookListingPage', () => {
 describe('generateMetadata', () => {
   it('titles the page after the listing', async () => {
     const metadata = await generateMetadata({
-      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      params: Promise.resolve({ id: FIXTURE_LISTING.id }),
       searchParams: Promise.resolve({}),
     });
 
-    expect(metadata.title).toBe(`Book ${MOCK_LISTING.title}`);
+    expect(metadata.title).toBe(`Book ${FIXTURE_LISTING.title}`);
   });
 
   it('calls notFound when the listing does not exist', async () => {
-    vi.mocked(fetchListing).mockResolvedValue(null);
+    server.use(
+      http.get(`${API_URL}/listings/:id`, () =>
+        HttpResponse.json({ error: { message: 'Listing not found' } }, { status: 404 }),
+      ),
+    );
 
     await expect(
       generateMetadata({
@@ -256,12 +261,20 @@ describe('generateMetadata', () => {
   });
 
   it('fetches with the same dates as the page, so Next.js can dedupe the two calls into one request', async () => {
+    let requestUrl: URL | undefined;
+    server.use(
+      http.get(`${API_URL}/listings/:id`, ({ request }) => {
+        requestUrl = new URL(request.url);
+        return HttpResponse.json(FIXTURE_LISTING);
+      }),
+    );
+
     await generateMetadata({
-      params: Promise.resolve({ id: MOCK_LISTING.id }),
+      params: Promise.resolve({ id: FIXTURE_LISTING.id }),
       searchParams: Promise.resolve({ checkIn: '2026-08-05', checkOut: '2026-08-10' }),
     });
 
-    expect(fetchListing).toHaveBeenCalledWith(MOCK_LISTING.id, {
+    expect(Object.fromEntries(requestUrl!.searchParams)).toEqual({
       checkIn: '2026-08-05',
       checkOut: '2026-08-10',
     });

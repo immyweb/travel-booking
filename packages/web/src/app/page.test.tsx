@@ -1,14 +1,10 @@
-import type { CityCentroid, SearchResponse } from '@travel-booking/core';
+import type { SearchResponse } from '@travel-booking/core';
 import { render, screen } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import { act } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchCities, fetchSearchResults } from '@/lib/api';
+import { server } from '@/mocks/server';
 import HomePage from './page';
-
-vi.mock('@/lib/api', () => ({
-  fetchCities: vi.fn(),
-  fetchSearchResults: vi.fn(),
-}));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -20,10 +16,7 @@ vi.mock('next/font/google', () => ({
   Bricolage_Grotesque: () => ({ className: 'font-display-mock' }),
 }));
 
-const MOCK_CITIES: CityCentroid[] = [
-  { city: 'Lisbon', country: 'Portugal', coordinates: { latitude: 38.7169, longitude: -9.1399 } },
-  { city: 'Paris', country: 'France', coordinates: { latitude: 48.8566, longitude: 2.3522 } },
-];
+const API_URL = 'http://localhost:4000';
 
 function searchResponseFor(id: string, title: string): SearchResponse {
   return {
@@ -43,11 +36,18 @@ function searchResponseFor(id: string, title: string): SearchResponse {
 }
 
 beforeEach(() => {
-  vi.mocked(fetchCities).mockResolvedValue(MOCK_CITIES);
-  vi.mocked(fetchSearchResults).mockImplementation(async (query) => {
-    if (query.country === 'France') return searchResponseFor('listing-paris', 'Le Marais loft');
-    return searchResponseFor('listing-lisbon', 'Sunny Alfama studio');
-  });
+  // fetchDeals fans out one fetchSearchResults call per city from
+  // fetchCities' default handler (Lisbon, Paris) — branch on the country
+  // query param the same way the previous per-country mockImplementation did.
+  server.use(
+    http.get(`${API_URL}/search`, ({ request }) => {
+      const country = new URL(request.url).searchParams.get('country');
+      if (country === 'France') {
+        return HttpResponse.json(searchResponseFor('listing-paris', 'Le Marais loft'));
+      }
+      return HttpResponse.json(searchResponseFor('listing-lisbon', 'Sunny Alfama studio'));
+    }),
+  );
 });
 
 describe('HomePage', () => {

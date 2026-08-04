@@ -1,10 +1,9 @@
+import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { signIn } from '@/lib/api';
+import { server } from '@/mocks/server';
 import { submitSignIn } from './_actions';
 
-vi.mock('@/lib/api', () => ({
-  signIn: vi.fn(),
-}));
+const API_URL = 'http://localhost:4000';
 
 const redirectMock = vi.fn((path: string) => {
   // Mirrors next/navigation's real redirect(), which throws to halt
@@ -22,35 +21,49 @@ const VALID_INPUT = {
 
 beforeEach(() => {
   redirectMock.mockClear();
-  vi.mocked(signIn).mockReset();
 });
 
 describe('submitSignIn', () => {
   it('returns a validation error without calling signIn for a malformed email', async () => {
+    // The default handler would otherwise silently serve the happy path and
+    // this omission would go unnoticed — wrap it in a spy to prove no request
+    // reached the network boundary at all.
+    const signInSpy = vi.fn();
+    server.use(
+      http.post(`${API_URL}/api/auth/sign-in/email`, () => {
+        signInSpy();
+        return HttpResponse.json({ user: { id: 'u1' } });
+      }),
+    );
+
     const state = await submitSignIn(null, { ...VALID_INPUT, email: 'not-an-email' });
 
     expect(state?.error).toBeTruthy();
-    expect(signIn).not.toHaveBeenCalled();
+    expect(signInSpy).not.toHaveBeenCalled();
   });
 
   it('returns a validation error without calling signIn when the password is missing', async () => {
+    const signInSpy = vi.fn();
+    server.use(
+      http.post(`${API_URL}/api/auth/sign-in/email`, () => {
+        signInSpy();
+        return HttpResponse.json({ user: { id: 'u1' } });
+      }),
+    );
+
     const state = await submitSignIn(null, { ...VALID_INPUT, password: '' });
 
     expect(state?.error).toBeTruthy();
-    expect(signIn).not.toHaveBeenCalled();
+    expect(signInSpy).not.toHaveBeenCalled();
   });
 
   it('redirects to "/" on success when no redirectTo was supplied', async () => {
-    vi.mocked(signIn).mockResolvedValue({ ok: true });
-
     await expect(submitSignIn(null, VALID_INPUT)).rejects.toThrow('NEXT_REDIRECT');
 
     expect(redirectMock).toHaveBeenCalledWith('/');
   });
 
   it('redirects to a supplied in-app redirectTo on success', async () => {
-    vi.mocked(signIn).mockResolvedValue({ ok: true });
-
     await expect(
       submitSignIn(null, { ...VALID_INPUT, redirectTo: '/listings/1/book' }),
     ).rejects.toThrow('NEXT_REDIRECT');
@@ -64,8 +77,6 @@ describe('submitSignIn', () => {
   it.each(['https://evil.example', '//evil.example', 'evil.example'])(
     'falls back to "/" rather than redirecting off-site for redirectTo=%s',
     async (redirectTo) => {
-      vi.mocked(signIn).mockResolvedValue({ ok: true });
-
       await expect(submitSignIn(null, { ...VALID_INPUT, redirectTo })).rejects.toThrow(
         'NEXT_REDIRECT',
       );
@@ -75,10 +86,14 @@ describe('submitSignIn', () => {
   );
 
   it('returns the message and does not redirect when signIn fails (wrong password/unknown email)', async () => {
-    vi.mocked(signIn).mockResolvedValue({
-      ok: false,
-      message: 'Invalid email or password',
-    });
+    server.use(
+      http.post(`${API_URL}/api/auth/sign-in/email`, () =>
+        HttpResponse.json(
+          { message: 'Invalid email or password', code: 'INVALID_EMAIL_OR_PASSWORD' },
+          { status: 401 },
+        ),
+      ),
+    );
 
     const state = await submitSignIn(null, VALID_INPUT);
 

@@ -1,10 +1,24 @@
 import { cleanup } from '@testing-library/react';
-import { afterEach } from 'vitest';
+import { afterAll, afterEach, beforeAll } from 'vitest';
 import '@testing-library/jest-dom/vitest';
+import { cookieStore } from '@/mocks/next-headers';
+import { server } from '@/mocks/server';
 
 // Vitest isn't configured with `test.globals`, so RTL's implicit
 // afterEach-based auto cleanup never registers — do it explicitly.
 afterEach(cleanup);
+
+// MSW intercepts every lib/api.ts call at the network boundary — see
+// docs/adr/0009-msw-as-frontend-network-mocking-boundary.md. 'error' on an
+// unhandled request surfaces a missing/wrong handler immediately rather than
+// letting the real fetch hang against a server that isn't running.
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+afterEach(() => {
+  server.resetHandlers();
+  cookieStore.set.mockClear();
+  cookieStore.getAll.mockReset().mockReturnValue([]);
+});
+afterAll(() => server.close());
 
 // jsdom doesn't implement these — Radix UI's Select relies on them for its
 // pointer-driven open/scroll behaviour.
