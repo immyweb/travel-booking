@@ -11,6 +11,7 @@ export type Config = {
   webAppUrl: string;
   mailer: { resendApiKey: string };
   auth: { secret: string; baseUrl: string };
+  payments: { stripeSecretKey: string; stripeWebhookSecret: string };
 };
 
 const envSchema = z.object({
@@ -30,6 +31,15 @@ const envSchema = z.object({
   // Better Auth's own view of where it's mounted — used to derive the
   // secure-cookie flag and to build any absolute links it generates.
   API_BASE_URL: z.url().default('http://localhost:4000'),
+  STRIPE_SECRET_KEY: z.string({
+    error: 'STRIPE_SECRET_KEY is not set — required to create Stripe PaymentIntents',
+  }),
+  // Verifies POST /webhooks/stripe's signature (see #32) — required at
+  // startup anyway, since it's part of the same PaymentProvider adapter
+  // constructed alongside createPaymentIntent/refund.
+  STRIPE_WEBHOOK_SECRET: z.string({
+    error: 'STRIPE_WEBHOOK_SECRET is not set — required to verify Stripe webhook signatures',
+  }),
 });
 
 // The one place this package reads process.env. Entry points call it once;
@@ -44,5 +54,9 @@ export function configFromEnv(): Config {
     webAppUrl: env.WEB_APP_URL,
     mailer: { resendApiKey: env.RESEND_API_KEY },
     auth: { secret: env.BETTER_AUTH_SECRET, baseUrl: env.API_BASE_URL },
+    payments: {
+      stripeSecretKey: env.STRIPE_SECRET_KEY,
+      stripeWebhookSecret: env.STRIPE_WEBHOOK_SECRET,
+    },
   };
 }

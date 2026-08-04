@@ -5,6 +5,7 @@ import type { Auth } from './auth/auth';
 import type { Db } from './db/db';
 import type { Logger } from './logging/logger';
 import type { Mailer } from './mailer/mailer';
+import type { PaymentProvider } from './payments/payments';
 import { createBookingsRouter } from './api/bookings/bookings.routes';
 import { createListingsRouter } from './api/listings/listings.routes';
 import { createSearchRouter } from './api/search/search.routes';
@@ -13,14 +14,20 @@ import { createErrorHandler, notFoundHandler } from './errors/errors';
 export type AppDependencies = {
   db: Db;
   logger: Logger;
+  // mailer/webAppUrl aren't used directly in this file yet — sending the
+  // booking confirmation email (built from webAppUrl into a confirmationUrl,
+  // same as createBooking used to) moves to the POST /webhooks/stripe
+  // handler landing in #32. Both stay app-level dependencies regardless of
+  // which route ends up using them.
   mailer: Mailer;
   webAppUrl: string;
   auth: Auth;
+  paymentProvider: PaymentProvider;
 };
 
 // The api's composition root: every slice is mounted here, and everything the
 // app needs arrives as an argument. Nothing in this file reads the environment.
-export function createApp({ db, logger, mailer, webAppUrl, auth }: AppDependencies): Express {
+export function createApp({ db, logger, auth, paymentProvider }: AppDependencies): Express {
   const app = express();
 
   // First, so every request — including ones that never reach a route — gets
@@ -53,7 +60,7 @@ export function createApp({ db, logger, mailer, webAppUrl, auth }: AppDependenci
 
   app.use(createSearchRouter(db));
   app.use(createListingsRouter(db));
-  app.use(createBookingsRouter({ db, mailer, logger, webAppUrl, auth }));
+  app.use(createBookingsRouter({ db, auth, paymentProvider }));
 
   // Order is load-bearing: every route first, then the 404 fallback for
   // anything unmatched, then the error seam last so both can reach it.

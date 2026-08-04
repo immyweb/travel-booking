@@ -8,6 +8,7 @@ import {
   pgEnum,
   pgTable,
   text,
+  timestamp,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
@@ -31,6 +32,7 @@ import { user } from './auth-schema';
 export * from './auth-schema';
 
 export const amenityEnum = pgEnum('amenity', AMENITIES);
+export const bookingStatusEnum = pgEnum('booking_status', ['pending', 'confirmed']);
 
 export const listings = pgTable(
   'listings',
@@ -73,6 +75,16 @@ export const bookings = pgTable(
     guests: integer('guests').notNull(),
     totalPrice: integer('total_price').notNull(),
     currency: varchar('currency', { length: 3 }).notNull(),
+    status: bookingStatusEnum('status').notNull().default('pending'),
+    // Null between the insert (which reserves the dates) and the follow-up
+    // update once Stripe has returned an id for the PaymentIntent created
+    // from it — see bookings.service.ts's createBooking.
+    stripePaymentIntentId: text('stripe_payment_intent_id'),
+    // Set only once the #32 webhook confirms payment; null while pending.
+    cardLast4: text('card_last4'),
+    // Drives the 15-minute abandoned-hold reclaim window in createBooking —
+    // a pending row older than this is treated as an abandoned checkout.
+    createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   (table) => [
     index('bookings_listing_id_idx').on(table.listingId),

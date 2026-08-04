@@ -40,6 +40,7 @@ export const FIXTURE_BOOKING: Booking = {
   nights: 5,
   totalPrice: 410,
   currency: 'EUR',
+  status: 'confirmed',
 };
 
 export const FIXTURE_SESSION_USER: SessionUser = {

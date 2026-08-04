@@ -6,7 +6,7 @@ import { bookings, listings } from '../../db/schema';
 import { createTestContext } from '../../test-support/context';
 import { signUpTestUser } from '../../test-support/auth';
 
-const { app, db, mailer } = createTestContext();
+const { app, db, mailer, paymentProvider } = createTestContext();
 
 // Isolated from real curated/seed data — and from other test files' own marker
 // countries, since test files run as separate processes against the same
@@ -43,7 +43,15 @@ async function seedListing(overrides: Partial<{ price: number; maxGuests: number
   return row!.id;
 }
 
-async function seedBooking(listingId: string, userId: string, checkIn: string, checkOut: string) {
+// `createdAt` defaults to "just now" (a live hold); the reclaim tests below
+// override it to simulate an abandoned checkout past the 15-minute window.
+async function seedBooking(
+  listingId: string,
+  userId: string,
+  checkIn: string,
+  checkOut: string,
+  overrides: Partial<{ status: 'pending' | 'confirmed'; createdAt: Date }> = {},
+) {
   await db.insert(bookings).values({
     listingId,
     userId,
@@ -54,6 +62,7 @@ async function seedBooking(listingId: string, userId: string, checkIn: string, c
     guests: 1,
     totalPrice: 1,
     currency: 'EUR',
+    ...overrides,
   });
 }
 
@@ -66,10 +75,11 @@ afterEach(async () => {
   await db.delete(listings).where(eq(listings.country, TEST_COUNTRY));
   await db.delete(user).where(like(user.email, `%@${TEST_EMAIL_DOMAIN}`));
   mailer.send.mockClear();
+  paymentProvider.createPaymentIntent.mockClear();
 });
 
 describe('POST /bookings', () => {
-  it('returns 201 with correct nights/totalPrice, linked to the signed-in user', async () => {
+  it('returns 201 pending with a clientSecret, linked to the signed-in user, and creates a PaymentIntent', async () => {
     const listingId = await seedListing({ price: 100 });
     const user = await signUpBookingTestUser();
 
@@ -84,24 +94,31 @@ describe('POST /bookings', () => {
 
     expect(response.status).toBe(201);
     expect(response.body).toEqual({
-      id: expect.any(String),
-      listingId,
-      userId: user.id,
-      checkIn: '2026-08-05',
-      checkOut: '2026-08-10',
-      guests: 2,
-      guestName: 'Jane Doe',
-      guestEmail: 'jane@example.com',
-      nights: 5,
-      totalPrice: 500,
+      booking: {
+        id: expect.any(String),
+        listingId,
+        userId: user.id,
+        checkIn: '2026-08-05',
+        checkOut: '2026-08-10',
+        guests: 2,
+        guestName: 'Jane Doe',
+        guestEmail: 'jane@example.com',
+        nights: 5,
+        totalPrice: 500,
+        currency: 'EUR',
+        status: 'pending',
+      },
+      clientSecret: expect.any(String),
+    });
+    expect(paymentProvider.createPaymentIntent).toHaveBeenCalledExactlyOnceWith({
+      amount: 50000,
       currency: 'EUR',
+      metadata: { bookingId: response.body.booking.id },
     });
-    expect(mailer.send).toHaveBeenCalledExactlyOnceWith({
-      to: 'jane@example.com',
-      subject: 'Your booking at Sunny Alfama studio is confirmed',
-      react: expect.anything(),
-      idempotencyKey: `booking-confirmation/${response.body.id}`,
-    });
+    // No confirmation email at creation time — that moves to the
+    // POST /webhooks/stripe handler (#32), triggered by actual payment
+    // success rather than by the hold merely being created.
+    expect(mailer.send).not.toHaveBeenCalled();
   });
 
   it('allows guestName/guestEmail to differ from the signed-in account', async () => {
@@ -118,7 +135,7 @@ describe('POST /bookings', () => {
     });
 
     expect(response.status).toBe(201);
-    expect(response.body).toMatchObject({
+    expect(response.body.booking).toMatchObject({
       userId: user.id,
       guestName: 'Someone Else',
       guestEmail: 'someone-else@example.com',
@@ -138,37 +155,6 @@ describe('POST /bookings', () => {
     });
 
     expect(response.status).toBe(401);
-  });
-
-  it('still returns 201 with the booking when the confirmation email fails to send', async () => {
-    const listingId = await seedListing({ price: 100 });
-    const user = await signUpBookingTestUser();
-    mailer.send.mockRejectedValueOnce(new Error('Resend is down'));
-
-    const response = await request(app).post('/bookings').set('Cookie', user.cookie).send({
-      listingId,
-      checkIn: '2026-08-05',
-      checkOut: '2026-08-10',
-      guests: 2,
-      guestName: 'Jane Doe',
-      guestEmail: 'jane@example.com',
-    });
-
-    expect(response.status).toBe(201);
-    expect(response.body).toEqual({
-      id: expect.any(String),
-      listingId,
-      userId: user.id,
-      checkIn: '2026-08-05',
-      checkOut: '2026-08-10',
-      guests: 2,
-      guestName: 'Jane Doe',
-      guestEmail: 'jane@example.com',
-      nights: 5,
-      totalPrice: 500,
-      currency: 'EUR',
-    });
-    expect(mailer.send).toHaveBeenCalledTimes(1);
   });
 
   it('returns 404 for an unknown listingId', async () => {
@@ -248,7 +234,7 @@ describe('POST /bookings', () => {
     expect(response.status).toBe(400);
   });
 
-  it('returns 409 when the dates overlap an existing booking for the same listing', async () => {
+  it('returns 409 when the colliding booking is pending and within the 15-minute hold window', async () => {
     const listingId = await seedListing();
     const user = await signUpBookingTestUser();
     await seedBooking(listingId, user.id, '2026-08-05', '2026-08-10');
@@ -263,6 +249,50 @@ describe('POST /bookings', () => {
     });
 
     expect(response.status).toBe(409);
+  });
+
+  it('returns 409 when the colliding booking is confirmed, regardless of age', async () => {
+    const listingId = await seedListing();
+    const user = await signUpBookingTestUser();
+    await seedBooking(listingId, user.id, '2026-08-05', '2026-08-10', {
+      status: 'confirmed',
+      createdAt: new Date(Date.now() - 60 * 60 * 1000),
+    });
+
+    const response = await request(app).post('/bookings').set('Cookie', user.cookie).send({
+      listingId,
+      checkIn: '2026-08-07',
+      checkOut: '2026-08-12',
+      guests: 1,
+      guestName: 'Jane Doe',
+      guestEmail: 'jane@example.com',
+    });
+
+    expect(response.status).toBe(409);
+  });
+
+  it('reclaims and succeeds when the colliding pending booking is older than the 15-minute hold window', async () => {
+    const listingId = await seedListing();
+    const user = await signUpBookingTestUser();
+    await seedBooking(listingId, user.id, '2026-08-05', '2026-08-10', {
+      createdAt: new Date(Date.now() - 16 * 60 * 1000),
+    });
+
+    const response = await request(app).post('/bookings').set('Cookie', user.cookie).send({
+      listingId,
+      checkIn: '2026-08-07',
+      checkOut: '2026-08-12',
+      guests: 1,
+      guestName: 'Jane Doe',
+      guestEmail: 'jane@example.com',
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body.booking).toMatchObject({
+      checkIn: '2026-08-07',
+      checkOut: '2026-08-12',
+      status: 'pending',
+    });
   });
 });
 
@@ -301,6 +331,7 @@ describe('GET /bookings/:id', () => {
       nights: 5,
       totalPrice: 500,
       currency: 'EUR',
+      status: 'pending',
     });
   });
 

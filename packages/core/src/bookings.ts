@@ -52,7 +52,9 @@ export type ClientCreateBooking = z.infer<typeof ClientCreateBookingSchema>;
 // The full Booking shape returned by both POST /bookings and GET
 // /bookings/:id. `nights`/`totalPrice` are computed server-side (ADR-0001:
 // captured in the Listing's own currency, never client-supplied) rather than
-// trusted from the request.
+// trusted from the request. `status` starts 'pending' at creation and only
+// becomes 'confirmed' once the Stripe webhook (see #32) observes a
+// successful payment.
 export const BookingSchema = z.object({
   id: z.string(),
   listingId: z.string(),
@@ -65,8 +67,18 @@ export const BookingSchema = z.object({
   nights: z.number(),
   totalPrice: z.number(),
   currency: z.string(),
+  status: z.enum(['pending', 'confirmed']),
 });
 export type Booking = z.infer<typeof BookingSchema>;
+
+// POST /bookings' response envelope: the newly created (always 'pending')
+// Booking plus the Stripe PaymentIntent's clientSecret the web client needs
+// to mount Stripe Elements and confirm payment.
+export const CreateBookingResponseSchema = z.object({
+  booking: BookingSchema,
+  clientSecret: z.string(),
+});
+export type CreateBookingResponse = z.infer<typeof CreateBookingResponseSchema>;
 
 // POST /bookings' outcome as the web client discriminates it: 'conflict' is
 // the #16 EXCLUDE constraint rejecting overlapping dates (409); 'invalid'

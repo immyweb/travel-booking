@@ -1,12 +1,11 @@
 import type { Booking, CreateBooking } from '@travel-booking/core';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq, lt } from 'drizzle-orm';
 import { SQL } from 'bun';
 import { ApiError } from '../../errors/errors';
 import type { Auth } from '../../auth/auth';
 import type { Db } from '../../db/db';
-import type { Logger } from '../../logging/logger';
-import type { Mailer } from '../../mailer/mailer';
-import { bookingConfirmationEmail } from '../../mailer/emails/BookingConfirmationEmail';
+import type { PaymentProvider } from '../../payments/payments';
+import { bookingOverlapsRange } from '../../db/booking-overlap';
 import { bookings, listings } from '../../db/schema';
 import { nightsBetween } from '../../pricing/nights';
 
@@ -16,22 +15,54 @@ import { nightsBetween } from '../../pricing/nights';
 // surfaces here as a driver error, not an application-level race.
 const EXCLUSION_VIOLATION = '23P01';
 
+// A pending Booking older than this is treated as an abandoned checkout: the
+// next conflicting request reclaims its dates rather than 409ing forever.
+const HOLD_WINDOW_MS = 15 * 60 * 1000;
+
 export type CreateBookingDependencies = {
   db: Db;
-  mailer: Mailer;
-  logger: Logger;
-  webAppUrl: string;
   auth: Auth;
+  paymentProvider: PaymentProvider;
 };
 
 function toBooking(row: typeof bookings.$inferSelect): Booking {
-  return { ...row, nights: nightsBetween(row.checkIn, row.checkOut) };
+  return {
+    id: row.id,
+    listingId: row.listingId,
+    userId: row.userId,
+    checkIn: row.checkIn,
+    checkOut: row.checkOut,
+    guestName: row.guestName,
+    guestEmail: row.guestEmail,
+    guests: row.guests,
+    totalPrice: row.totalPrice,
+    currency: row.currency,
+    status: row.status,
+    nights: nightsBetween(row.checkIn, row.checkOut),
+  };
+}
+
+function isExclusionViolation(err: unknown): boolean {
+  // drizzle-orm wraps the driver error in its own DrizzleQueryError; the
+  // actual bun:sql PostgresError — whose `errno` carries the Postgres
+  // SQLSTATE — is on `.cause`.
+  const cause = err instanceof Error ? err.cause : undefined;
+  return cause instanceof SQL.PostgresError && cause.errno === EXCLUSION_VIOLATION;
+}
+
+async function insertPendingBooking(db: Db, values: typeof bookings.$inferInsert) {
+  const [row] = await db.insert(bookings).values(values).returning();
+  return row!;
+}
+
+function throwOverlapConflict(): never {
+  throw new ApiError(409, 'Booking dates overlap an existing booking for this listing');
 }
 
 export async function createBooking(
-  { db, mailer, logger, webAppUrl }: CreateBookingDependencies,
+  { db, paymentProvider }: CreateBookingDependencies,
   input: CreateBooking,
-): Promise<Booking> {
+): Promise<{ booking: Booking; clientSecret: string }> {
   const [listing] = await db
     .select({
       title: listings.title,
@@ -54,65 +85,76 @@ export async function createBooking(
   const nights = nightsBetween(input.checkIn, input.checkOut);
   const totalPrice = nights * listing.price;
 
-  let row: typeof bookings.$inferSelect | undefined;
+  const values = {
+    listingId: input.listingId,
+    userId: input.userId,
+    checkIn: input.checkIn,
+    checkOut: input.checkOut,
+    guestName: input.guestName,
+    guestEmail: input.guestEmail,
+    guests: input.guests,
+    totalPrice,
+    currency: listing.currency,
+  };
+
+  let row: typeof bookings.$inferSelect;
   try {
-    [row] = await db
-      .insert(bookings)
-      .values({
-        listingId: input.listingId,
-        userId: input.userId,
-        checkIn: input.checkIn,
-        checkOut: input.checkOut,
-        guestName: input.guestName,
-        guestEmail: input.guestEmail,
-        guests: input.guests,
-        totalPrice,
-        currency: listing.currency,
-      })
-      .returning();
+    // Inserted first — reserving the dates via the EXCLUDE constraint — so
+    // the hold is in place before the (slower, network-bound) call out to
+    // Stripe below.
+    row = await insertPendingBooking(db, values);
   } catch (err) {
-    // drizzle-orm wraps the driver error in its own DrizzleQueryError; the
-    // actual bun:sql PostgresError — whose `errno` carries the Postgres
-    // SQLSTATE — is on `.cause`.
-    const cause = err instanceof Error ? err.cause : undefined;
-    if (cause instanceof SQL.PostgresError && cause.errno === EXCLUSION_VIOLATION) {
-      throw new ApiError(409, 'Booking dates overlap an existing booking for this listing');
+    if (!isExclusionViolation(err)) {
+      throw err;
     }
-    throw err;
+
+    // A colliding row past the 15-minute hold window is an abandoned
+    // checkout: reclaim it by deleting it and retry the insert once. A row
+    // that's still within the window, or already confirmed, is a live hold
+    // — no reclaim, no retry.
+    const staleCutoff = new Date(Date.now() - HOLD_WINDOW_MS);
+    const reclaimed = await db
+      .delete(bookings)
+      .where(
+        and(
+          eq(bookings.listingId, input.listingId),
+          eq(bookings.status, 'pending'),
+          lt(bookings.createdAt, staleCutoff),
+          bookingOverlapsRange(input.checkIn, input.checkOut),
+        ),
+      )
+      .returning({ id: bookings.id });
+
+    if (reclaimed.length === 0) {
+      throwOverlapConflict();
+    }
+
+    try {
+      row = await insertPendingBooking(db, values);
+    } catch (retryErr) {
+      if (isExclusionViolation(retryErr)) {
+        throwOverlapConflict();
+      }
+      throw retryErr;
+    }
   }
 
-  const booking = toBooking(row!);
-  const confirmationUrl = `${webAppUrl}/bookings/${booking.id}`;
+  const booking = toBooking(row);
 
-  // Best-effort: the booking has already succeeded and is never rolled back
-  // or retried for a failed send. Await it (so the side effect stays
-  // deterministic and testable) but never let it reach the caller — a flaky
-  // email provider must not turn a successful booking into a 500.
-  try {
-    const { subject, react } = bookingConfirmationEmail({
-      guestName: booking.guestName,
-      listingTitle: listing.title,
-      checkIn: booking.checkIn,
-      checkOut: booking.checkOut,
-      nights: booking.nights,
-      totalPrice: booking.totalPrice,
-      currency: booking.currency,
-      confirmationUrl,
-    });
+  const paymentIntent = await paymentProvider.createPaymentIntent({
+    amount: booking.totalPrice * 100,
+    currency: booking.currency,
+    metadata: { bookingId: booking.id },
+  });
 
-    await mailer.send({
-      to: booking.guestEmail,
-      subject,
-      react,
-      // Resend's own recommended <event-type>/<entity-id> pattern, so a
-      // future retry mechanism can never double-send for the same booking.
-      idempotencyKey: `booking-confirmation/${booking.id}`,
-    });
-  } catch (err) {
-    logger.error(err, `Failed to send booking confirmation email for booking ${booking.id}`);
-  }
+  await db
+    .update(bookings)
+    .set({ stripePaymentIntentId: paymentIntent.id })
+    .where(eq(bookings.id, booking.id));
 
-  return booking;
+  // No confirmation email here — sent by the POST /webhooks/stripe handler
+  // (#32) once payment actually succeeds, not at hold-creation time.
+  return { booking, clientSecret: paymentIntent.clientSecret };
 }
 
 export async function getBookingById(db: Db, id: string): Promise<Booking | null> {

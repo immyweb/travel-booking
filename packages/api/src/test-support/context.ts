@@ -5,12 +5,14 @@ import { configFromEnv } from '../config/config';
 import { createDb, type Db } from '../db/db';
 import { createLogger } from '../logging/logger';
 import { createFakeMailer, type FakeMailer } from './fake-mailer';
+import { createFakePaymentProvider, type FakePaymentProvider } from './fake-payment-provider';
 
 export type TestContext = {
   app: Express;
   db: Db;
   mailer: FakeMailer;
   auth: Auth;
+  paymentProvider: FakePaymentProvider;
 };
 
 // Wires the app exactly as index.ts does, so tests exercise the real
@@ -29,11 +31,13 @@ export function createTestContext(): TestContext {
     baseUrl: config.auth.baseUrl,
     webAppUrl: config.webAppUrl,
   });
+  const paymentProvider = createFakePaymentProvider();
 
   return {
-    app: createApp({ db, logger, mailer, webAppUrl: config.webAppUrl, auth }),
+    app: createApp({ db, logger, mailer, webAppUrl: config.webAppUrl, auth, paymentProvider }),
     db,
     mailer,
     auth,
+    paymentProvider,
   };
 }

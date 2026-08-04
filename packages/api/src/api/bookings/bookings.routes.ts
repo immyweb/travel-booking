@@ -1,4 +1,8 @@
-import { BookingSchema, CreateBookingSchema } from '@travel-booking/core';
+import {
+  BookingSchema,
+  CreateBookingResponseSchema,
+  CreateBookingSchema,
+} from '@travel-booking/core';
 import { fromNodeHeaders } from 'better-auth/node';
 import type { Request } from 'express';
 import { Router } from 'express';
@@ -47,12 +51,12 @@ export function createBookingsRouter(deps: CreateBookingDependencies): Router {
       next();
     },
     validateBody(CreateBookingSchema, async (body, _req, res) => {
-      const booking = await createBooking(deps, body);
+      const { booking, clientSecret } = await createBooking(deps, body);
 
       // `parse`, not `safeParse` — a response that doesn't match the contract
       // is our bug, so it belongs on the 500 path rather than being reported
       // to the client as if they caused it.
-      res.status(201).json(BookingSchema.parse(booking));
+      res.status(201).json(CreateBookingResponseSchema.parse({ booking, clientSecret }));
     }),
   );
 

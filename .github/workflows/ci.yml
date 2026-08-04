@@ -100,12 +100,13 @@ jobs:
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
       - run: bun install --frozen-lockfile
       # These are non-secret test fixtures (dummy Resend key, placeholder
-      # auth secret, default postgres/postgres creds) matching
-      # .env.example/local .env + .env.test — see docs/adr/0010.
+      # auth secret, dummy Stripe test-mode keys, default postgres/postgres
+      # creds) matching .env.example/local .env + .env.test — see docs/adr/0010.
       # packages/api/.env is needed too, not just .env.test: configFromEnv()
-      # requires RESEND_API_KEY/BETTER_AUTH_SECRET even for db:migrate, and
-      # migrate.ts only loads ../../.env explicitly — those two vars come
-      # from Bun's automatic packages/api/.env loading, same as local dev.
+      # requires RESEND_API_KEY/BETTER_AUTH_SECRET/STRIPE_* even for
+      # db:migrate (drizzle.config.ts also calls configFromEnv()), and
+      # migrate.ts only loads ../../.env explicitly — those vars come from
+      # Bun's automatic packages/api/.env loading, same as local dev.
       - name: Write env files
         run: |
           cat <<'EOF' > .env
@@ -118,6 +119,8 @@ jobs:
           RESEND_API_KEY=re_test_dummy_key
           LOG_LEVEL=silent
           BETTER_AUTH_SECRET=02eb38e671c761056bcfb31c9a98d3f9203c3268cc7e645221d56e640e07cd4e
+          STRIPE_SECRET_KEY=sk_test_dummy_key
+          STRIPE_WEBHOOK_SECRET=whsec_test_dummy_secret
           EOF
           cp packages/api/.env packages/api/.env.test
       - run: bun run --filter='@travel-booking/api' db:migrate

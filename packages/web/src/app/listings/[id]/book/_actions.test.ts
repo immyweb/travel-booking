@@ -38,6 +38,7 @@ const BOOKING: Booking = {
   nights: 5,
   totalPrice: 410,
   currency: 'EUR',
+  status: 'confirmed',
 };
 
 beforeEach(() => {

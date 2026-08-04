@@ -22,8 +22,19 @@ export type {
 export { AvailabilitySchema, ListingDetailSchema, ListingQuerySchema } from './listings';
 export type { Availability, ListingDetail, ListingQuery } from './listings';
 
-export { BookingSchema, ClientCreateBookingSchema, CreateBookingSchema } from './bookings';
-export type { Booking, ClientCreateBooking, CreateBooking, CreateBookingResult } from './bookings';
+export {
+  BookingSchema,
+  ClientCreateBookingSchema,
+  CreateBookingResponseSchema,
+  CreateBookingSchema,
+} from './bookings';
+export type {
+  Booking,
+  ClientCreateBooking,
+  CreateBooking,
+  CreateBookingResponse,
+  CreateBookingResult,
+} from './bookings';
 
 export { BetterAuthErrorSchema, SessionUserSchema } from './auth';
 export type { AuthActionResult, BetterAuthError, SessionUser } from './auth';
