@@ -33,3 +33,7 @@ _Avoid_: Traveler
 
 **Location**:
 The geo-position of a Listing (latitude, longitude, city, country) — used for search, browse, and maps.
+
+**Locale**:
+The UI language a visitor is browsing in (e.g. `en`, `fr`) — governs which static UI copy is shown, not to be confused with Location. A Listing's city/country is data and is never translated by Locale; only static UI copy is.
+_Avoid_: Language (when referring to the routing/UI concept — use Locale to match the routing segment and translation-file naming)
