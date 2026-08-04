@@ -9,7 +9,7 @@
     "test": "bun --bun --env-file=../../.env --env-file=.env.test vitest run",
     "typecheck": "tsc --noEmit",
     "db:generate": "bun --env-file=../../.env drizzle-kit generate",
-    "db:migrate": "bun --env-file=../../.env scripts/migrate.ts",
+    "db:migrate": "bun --env-file=../../.env --env-file=.env scripts/migrate.ts",
     "db:seed": "bun --env-file=../../.env --env-file=.env scripts/seed.ts",
     "db:studio": "bun --env-file=../../.env drizzle-kit studio"
   },
