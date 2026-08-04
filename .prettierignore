@@ -4,3 +4,12 @@ dist
 build
 coverage
 bun.lock
+
+# drizzle-kit generated migration metadata
+packages/api/drizzle/meta
+
+# shadcn-generated UI primitives
+packages/web/src/components/ui
+
+# vendored Claude Code skill bundle
+.claude/skills/vercel-react-best-practices

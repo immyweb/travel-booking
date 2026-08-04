@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  BUN_VERSION: 1.3.14
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+
+  format-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+      - run: bun install --frozen-lockfile
+      - run: bun run format:check
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+
+  test-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+      - run: bun install --frozen-lockfile
+      - run: bun run test:web
+
+  test-api:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: imresamu/postgis:18-3.6-alpine3.22
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: travel_booking
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d travel_booking"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+      - run: bun install --frozen-lockfile
+      # These are non-secret test fixtures (dummy Resend key, placeholder
+      # auth secret, default postgres/postgres creds) matching
+      # .env.example/local .env + .env.test — see docs/adr/0010.
+      # packages/api/.env is needed too, not just .env.test: configFromEnv()
+      # requires RESEND_API_KEY/BETTER_AUTH_SECRET even for db:migrate, and
+      # migrate.ts only loads ../../.env explicitly — those two vars come
+      # from Bun's automatic packages/api/.env loading, same as local dev.
+      - name: Write env files
+        run: |
+          cat <<'EOF' > .env
+          POSTGRES_USER=postgres
+          POSTGRES_PASSWORD=postgres
+          POSTGRES_DB=travel_booking
+          DATABASE_URL=postgres://postgres:postgres@localhost:5432/travel_booking
+          EOF
+          cat <<'EOF' > packages/api/.env
+          RESEND_API_KEY=re_test_dummy_key
+          LOG_LEVEL=silent
+          BETTER_AUTH_SECRET=02eb38e671c761056bcfb31c9a98d3f9203c3268cc7e645221d56e640e07cd4e
+          EOF
+          cp packages/api/.env packages/api/.env.test
+      - run: bun run --filter='@travel-booking/api' db:migrate
+      - run: bun run test:api
