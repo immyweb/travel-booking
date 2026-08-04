@@ -1,16 +1,20 @@
 import { describe, expect, it, vi } from 'vitest';
 
-const { paymentIntentsCreateMock, webhooksConstructEventMock, refundsCreateMock } = vi.hoisted(
-  () => ({
-    paymentIntentsCreateMock: vi.fn(),
-    webhooksConstructEventMock: vi.fn(),
-    refundsCreateMock: vi.fn(),
-  }),
-);
+const {
+  paymentIntentsCreateMock,
+  paymentIntentsRetrieveMock,
+  webhooksConstructEventMock,
+  refundsCreateMock,
+} = vi.hoisted(() => ({
+  paymentIntentsCreateMock: vi.fn(),
+  paymentIntentsRetrieveMock: vi.fn(),
+  webhooksConstructEventMock: vi.fn(),
+  refundsCreateMock: vi.fn(),
+}));
 
 vi.mock('stripe', () => ({
   default: class {
-    paymentIntents = { create: paymentIntentsCreateMock };
+    paymentIntents = { create: paymentIntentsCreateMock, retrieve: paymentIntentsRetrieveMock };
     webhooks = { constructEvent: webhooksConstructEventMock };
     refunds = { create: refundsCreateMock };
   },
@@ -80,6 +84,40 @@ describe('createStripePaymentProvider', () => {
       expect(() => paymentProvider.verifyWebhookSignature('raw-payload', 'bad-sig')).toThrow(
         'Invalid signature',
       );
+    });
+  });
+
+  describe('getCardLast4', () => {
+    it("retrieves the PaymentIntent with payment_method expanded and returns the card's last4", async () => {
+      paymentIntentsRetrieveMock.mockResolvedValueOnce({
+        id: 'pi_123',
+        payment_method: { card: { last4: '4242' } },
+      });
+      const paymentProvider = createStripePaymentProvider('sk_test_dummy', 'whsec_dummy');
+
+      const last4 = await paymentProvider.getCardLast4('pi_123');
+
+      expect(paymentIntentsRetrieveMock).toHaveBeenCalledExactlyOnceWith('pi_123', {
+        expand: ['payment_method'],
+      });
+      expect(last4).toBe('4242');
+    });
+
+    it('returns null when the PaymentIntent has no attached payment method', async () => {
+      paymentIntentsRetrieveMock.mockResolvedValueOnce({ id: 'pi_123', payment_method: null });
+      const paymentProvider = createStripePaymentProvider('sk_test_dummy', 'whsec_dummy');
+
+      await expect(paymentProvider.getCardLast4('pi_123')).resolves.toBeNull();
+    });
+
+    it('returns null when the payment method has no card (e.g. a non-card method)', async () => {
+      paymentIntentsRetrieveMock.mockResolvedValueOnce({
+        id: 'pi_123',
+        payment_method: { card: undefined },
+      });
+      const paymentProvider = createStripePaymentProvider('sk_test_dummy', 'whsec_dummy');
+
+      await expect(paymentProvider.getCardLast4('pi_123')).resolves.toBeNull();
     });
   });
 

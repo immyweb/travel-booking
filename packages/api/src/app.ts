@@ -9,16 +9,12 @@ import type { PaymentProvider } from './payments/payments';
 import { createBookingsRouter } from './api/bookings/bookings.routes';
 import { createListingsRouter } from './api/listings/listings.routes';
 import { createSearchRouter } from './api/search/search.routes';
+import { createWebhooksRouter } from './api/webhooks/webhooks.routes';
 import { createErrorHandler, notFoundHandler } from './errors/errors';
 
 export type AppDependencies = {
   db: Db;
   logger: Logger;
-  // mailer/webAppUrl aren't used directly in this file yet — sending the
-  // booking confirmation email (built from webAppUrl into a confirmationUrl,
-  // same as createBooking used to) moves to the POST /webhooks/stripe
-  // handler landing in #32. Both stay app-level dependencies regardless of
-  // which route ends up using them.
   mailer: Mailer;
   webAppUrl: string;
   auth: Auth;
@@ -27,7 +23,14 @@ export type AppDependencies = {
 
 // The api's composition root: every slice is mounted here, and everything the
 // app needs arrives as an argument. Nothing in this file reads the environment.
-export function createApp({ db, logger, auth, paymentProvider }: AppDependencies): Express {
+export function createApp({
+  db,
+  logger,
+  mailer,
+  webAppUrl,
+  auth,
+  paymentProvider,
+}: AppDependencies): Express {
   const app = express();
 
   // First, so every request — including ones that never reach a route — gets
@@ -49,6 +52,12 @@ export function createApp({ db, logger, auth, paymentProvider }: AppDependencies
   // before express.json() — parsing the body first leaves nothing for
   // Better Auth's handler to read, and its client hangs on "pending".
   app.all('/api/auth/*splat', toNodeHandler(auth));
+
+  // Same ordering concern as Better Auth above: Stripe signs the exact raw
+  // bytes of the request body, so this route parses its own body (via
+  // express.raw, inside the router itself) ahead of the global express.json()
+  // below rather than relying on it.
+  app.use(createWebhooksRouter({ db, mailer, webAppUrl, paymentProvider, logger }));
 
   // Only write routes (POST /bookings, and Better Auth's own routes above)
   // need a parsed JSON body.

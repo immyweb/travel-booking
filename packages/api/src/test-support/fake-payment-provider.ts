@@ -13,6 +13,7 @@ export type FakePaymentProvider = PaymentProvider & {
   verifyWebhookSignature: ReturnType<
     typeof vi.fn<(payload: string | Buffer, signature: string) => Stripe.Event>
   >;
+  getCardLast4: ReturnType<typeof vi.fn<(paymentIntentId: string) => Promise<string | null>>>;
   refund: ReturnType<typeof vi.fn<(paymentIntentId: string) => Promise<void>>>;
 };
 
@@ -25,6 +26,9 @@ export function createFakePaymentProvider(): FakePaymentProvider {
       return { id, clientSecret: `${id}_secret_test` };
     }),
     verifyWebhookSignature: vi.fn(),
+    // Stripe's standard test-card last4 — individual tests override with
+    // `.mockResolvedValueOnce(...)` where the value itself matters.
+    getCardLast4: vi.fn().mockResolvedValue('4242'),
     refund: vi.fn().mockResolvedValue(undefined),
   };
 }

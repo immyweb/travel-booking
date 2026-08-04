@@ -19,6 +19,10 @@ export type CreatedPaymentIntent = {
 export type PaymentProvider = {
   createPaymentIntent(input: CreatePaymentIntentInput): Promise<CreatedPaymentIntent>;
   verifyWebhookSignature(payload: string | Buffer, signature: string): Stripe.Event;
+  // Webhook events carry the PaymentIntent's `payment_method` as a bare id,
+  // not the expanded card details — the #32 webhook needs a follow-up call
+  // to actually read the card's last4.
+  getCardLast4(paymentIntentId: string): Promise<string | null>;
   refund(paymentIntentId: string): Promise<void>;
 };
 
@@ -50,6 +54,22 @@ export function createStripePaymentProvider(
 
     verifyWebhookSignature(payload, signature) {
       return stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+    },
+
+    async getCardLast4(paymentIntentId) {
+      const intent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+        expand: ['payment_method'],
+      });
+
+      // Expanded, so an object rather than a bare id — except for the (here
+      // impossible in practice) case of a PaymentIntent with no attached
+      // payment method yet.
+      const paymentMethod = intent.payment_method;
+      if (!paymentMethod || typeof paymentMethod === 'string') {
+        return null;
+      }
+
+      return paymentMethod.card?.last4 ?? null;
     },
 
     async refund(paymentIntentId) {
