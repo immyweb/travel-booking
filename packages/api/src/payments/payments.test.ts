@@ -15,7 +15,7 @@ const {
 vi.mock('stripe', () => ({
   default: class {
     paymentIntents = { create: paymentIntentsCreateMock, retrieve: paymentIntentsRetrieveMock };
-    webhooks = { constructEvent: webhooksConstructEventMock };
+    webhooks = { constructEventAsync: webhooksConstructEventMock };
     refunds = { create: refundsCreateMock };
   },
 }));
@@ -61,12 +61,12 @@ describe('createStripePaymentProvider', () => {
   });
 
   describe('verifyWebhookSignature', () => {
-    it('delegates to the Stripe SDK with the configured webhook secret', () => {
+    it('delegates to the Stripe SDK with the configured webhook secret', async () => {
       const fakeEvent = { id: 'evt_123', type: 'payment_intent.succeeded' };
-      webhooksConstructEventMock.mockReturnValueOnce(fakeEvent);
+      webhooksConstructEventMock.mockResolvedValueOnce(fakeEvent);
       const paymentProvider = createStripePaymentProvider('sk_test_dummy', 'whsec_dummy');
 
-      const event = paymentProvider.verifyWebhookSignature('raw-payload', 'sig-header');
+      const event = await paymentProvider.verifyWebhookSignature('raw-payload', 'sig-header');
 
       expect(webhooksConstructEventMock).toHaveBeenCalledExactlyOnceWith(
         'raw-payload',
@@ -76,15 +76,13 @@ describe('createStripePaymentProvider', () => {
       expect(event).toBe(fakeEvent);
     });
 
-    it('propagates Stripe SDK signature-verification failures', () => {
-      webhooksConstructEventMock.mockImplementationOnce(() => {
-        throw new Error('Invalid signature');
-      });
+    it('propagates Stripe SDK signature-verification failures', async () => {
+      webhooksConstructEventMock.mockRejectedValueOnce(new Error('Invalid signature'));
       const paymentProvider = createStripePaymentProvider('sk_test_dummy', 'whsec_dummy');
 
-      expect(() => paymentProvider.verifyWebhookSignature('raw-payload', 'bad-sig')).toThrow(
-        'Invalid signature',
-      );
+      await expect(
+        paymentProvider.verifyWebhookSignature('raw-payload', 'bad-sig'),
+      ).rejects.toThrow('Invalid signature');
     });
   });
 

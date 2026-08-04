@@ -20,6 +20,10 @@ const notFoundMock = vi.fn(() => {
 });
 vi.mock('next/navigation', () => ({
   notFound: () => notFoundMock(),
+  // PendingBookingWatcher (mounted for a still-pending booking) calls
+  // useRouter() for its refresh() — a no-op stand-in is enough here since
+  // its polling behavior has its own dedicated test suite.
+  useRouter: () => ({ refresh: vi.fn() }),
 }));
 
 beforeEach(() => {
@@ -113,6 +117,10 @@ describe('BookingConfirmationPage', () => {
 
     expect(screen.getByRole('heading', { name: /confirming your payment/i })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Booking confirmed' })).not.toBeInTheDocument();
+    // PendingBookingWatcher's own suite covers the polling/timeout behavior
+    // in detail — this just proves it's actually mounted for a pending
+    // booking, via the copy it renders.
+    expect(screen.getByText(/this can take a few moments/i, { exact: false })).toBeInTheDocument();
   });
 });
 

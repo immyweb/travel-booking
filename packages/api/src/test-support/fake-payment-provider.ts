@@ -11,7 +11,7 @@ export type FakePaymentProvider = PaymentProvider & {
     typeof vi.fn<(input: CreatePaymentIntentInput) => Promise<CreatedPaymentIntent>>
   >;
   verifyWebhookSignature: ReturnType<
-    typeof vi.fn<(payload: string | Buffer, signature: string) => Stripe.Event>
+    typeof vi.fn<(payload: string | Buffer, signature: string) => Promise<Stripe.Event>>
   >;
   getCardLast4: ReturnType<typeof vi.fn<(paymentIntentId: string) => Promise<string | null>>>;
   refund: ReturnType<typeof vi.fn<(paymentIntentId: string) => Promise<void>>>;

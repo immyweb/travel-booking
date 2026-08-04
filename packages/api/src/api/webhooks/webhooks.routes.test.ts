@@ -110,7 +110,7 @@ describe('POST /webhooks/stripe', () => {
   });
 
   it('acknowledges (200) and ignores event types other than payment_intent.succeeded', async () => {
-    paymentProvider.verifyWebhookSignature.mockReturnValueOnce({
+    paymentProvider.verifyWebhookSignature.mockResolvedValueOnce({
       id: 'evt_other',
       type: 'payment_intent.payment_failed',
       data: { object: {} },
@@ -129,7 +129,7 @@ describe('POST /webhooks/stripe', () => {
     const bookingId = await seedBooking(listingId, bookingUser.id, {
       stripePaymentIntentId: 'pi_confirm',
     });
-    paymentProvider.verifyWebhookSignature.mockReturnValueOnce(
+    paymentProvider.verifyWebhookSignature.mockResolvedValueOnce(
       paymentIntentSucceededEvent(bookingId, 'pi_confirm'),
     );
 
@@ -155,13 +155,13 @@ describe('POST /webhooks/stripe', () => {
       stripePaymentIntentId: 'pi_redeliver',
     });
 
-    paymentProvider.verifyWebhookSignature.mockReturnValueOnce(
+    paymentProvider.verifyWebhookSignature.mockResolvedValueOnce(
       paymentIntentSucceededEvent(bookingId, 'pi_redeliver'),
     );
     const first = await request(app).post('/webhooks/stripe').send({});
     expect(first.status).toBe(200);
 
-    paymentProvider.verifyWebhookSignature.mockReturnValueOnce(
+    paymentProvider.verifyWebhookSignature.mockResolvedValueOnce(
       paymentIntentSucceededEvent(bookingId, 'pi_redeliver'),
     );
     const second = await request(app).post('/webhooks/stripe').send({});
@@ -175,7 +175,7 @@ describe('POST /webhooks/stripe', () => {
 
   it('refunds and does not throw when no Booking exists for the event (already reclaimed)', async () => {
     const missingBookingId = '00000000-0000-0000-0000-000000000000';
-    paymentProvider.verifyWebhookSignature.mockReturnValueOnce(
+    paymentProvider.verifyWebhookSignature.mockResolvedValueOnce(
       paymentIntentSucceededEvent(missingBookingId, 'pi_orphaned'),
     );
 

@@ -18,7 +18,7 @@ export type CreatedPaymentIntent = {
 // a real adapter wraps the Stripe SDK, a fake stands in for it in tests.
 export type PaymentProvider = {
   createPaymentIntent(input: CreatePaymentIntentInput): Promise<CreatedPaymentIntent>;
-  verifyWebhookSignature(payload: string | Buffer, signature: string): Stripe.Event;
+  verifyWebhookSignature(payload: string | Buffer, signature: string): Promise<Stripe.Event>;
   // Webhook events carry the PaymentIntent's `payment_method` as a bare id,
   // not the expanded card details — the #32 webhook needs a follow-up call
   // to actually read the card's last4.
@@ -57,7 +57,12 @@ export function createStripePaymentProvider(
     },
 
     verifyWebhookSignature(payload, signature) {
-      return stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+      // Bun's `crypto.subtle` is only exposed async, so Stripe's SDK falls
+      // back to its SubtleCryptoProvider here (vs. Node's sync-capable
+      // NodeCryptoProvider) — constructEvent (sync) throws
+      // CryptoProviderOnlySupportsAsyncError under Bun; constructEventAsync
+      // is required regardless of runtime.
+      return stripe.webhooks.constructEventAsync(payload, signature, webhookSecret);
     },
 
     async getCardLast4(paymentIntentId) {

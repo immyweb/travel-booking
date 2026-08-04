@@ -18,7 +18,7 @@ export function createWebhooksRouter(deps: StripeWebhookDependencies): Router {
     async (req, res) => {
       let event: Stripe.Event;
       try {
-        event = deps.paymentProvider.verifyWebhookSignature(
+        event = await deps.paymentProvider.verifyWebhookSignature(
           req.body as Buffer,
           req.header('stripe-signature') ?? '',
         );

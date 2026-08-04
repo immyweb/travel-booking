@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { displayFont } from '@/app/_components/fonts';
 import { ListingSummaryCard } from '@/app/_components/ListingSummaryCard';
 import { fetchBooking, fetchListing } from '@/lib/api';
+import { PendingBookingWatcher } from './_components/PendingBookingWatcher';
 
 type BookingConfirmationPageProps = {
   params: Promise<{ id: string }>;
@@ -58,11 +59,7 @@ export default async function BookingConfirmationPage({ params }: BookingConfirm
           >
             {isPending ? 'Confirming your payment…' : 'Booking confirmed'}
           </h1>
-          {isPending && (
-            <p className="text-sm text-muted-foreground">
-              This can take a few moments — refresh the page shortly if it doesn&apos;t update.
-            </p>
-          )}
+          {isPending && <PendingBookingWatcher bookingId={booking.id} />}
         </div>
 
         <ListingSummaryCard title={listing.title} image={listing.images[0]!}>

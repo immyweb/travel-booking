@@ -9,7 +9,7 @@ A bookable property posted on the platform — the single canonical term for wha
 _Avoid_: Accommodation, accomodation
 
 **Booking**:
-A confirmed reservation of a Listing by a User for a date range, created via payment.
+A reservation of a Listing by a User for a date range. Created `pending` — which reserves the dates but is not yet secured — and becomes `confirmed` once payment for it succeeds. A `pending` Booking whose dates were never paid for within the hold window is reclaimable by another booking attempt.
 _Avoid_: Reservation
 
 **Amenity**:

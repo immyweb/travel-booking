@@ -85,6 +85,10 @@ function PaymentForm({ bookingId, clientSecret }: { bookingId: string; clientSec
         onReady={() => setCardReady(true)}
       />
 
+      <p className="mt-2 text-sm text-muted-foreground">
+        Test card: 4242 4242 4242 4242 · Any future date · Any CVC
+      </p>
+
       {error && (
         <p role="alert" className="text-sm font-medium text-destructive">
           {error}
