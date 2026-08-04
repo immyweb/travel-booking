@@ -1,0 +1,10 @@
+# Booking creation is a two-phase pending→confirmed flow, not a single call with payment details in the body
+
+`SYSTEM-DESIGN.md`'s original sketch had `POST /bookings` take `paymentDetails` directly in the request body and return a fully-booked reservation in one round trip. The real, implemented flow (#31–#33) is two-phase instead: `POST /bookings` creates a `pending` Booking — which reserves the dates via the `bookings_no_overlapping_dates` EXCLUDE constraint (#16) — and a Stripe PaymentIntent, returning a `clientSecret`. The browser then confirms payment itself, client-side, against that `clientSecret` via Stripe Elements' `CardElement` (ADR-0011). Only once Stripe's `payment_intent.succeeded` webhook (`POST /webhooks/stripe`, signature-verified) lands does the Booking flip to `confirmed` and the confirmation email go out.
+
+Two reasons this replaced the single-call design:
+
+- **PCI scope.** A single endpoint taking raw card details in its body would mean Express handling card data directly, pulling the API into PCI-DSS scope. Stripe Elements keeps card input entirely client-side — the card number never reaches the server, only Stripe's own hosted iframe does — so Express only ever sees a `clientSecret` and, later, a signed webhook event.
+- **Stripe Elements requires client-side confirmation.** `CardElement` can't be confirmed from the server at all; `stripe.confirmCardPayment(clientSecret, ...)` has to run in the browser with a live Stripe.js instance. A synchronous single-call API was never achievable once Elements was the chosen integration, independent of the PCI question.
+
+A consequence of "confirmed" being decided by a webhook rather than trusted from the client's own confirm call: `/bookings/[id]` can't assume payment succeeded just because the browser redirected there, and instead polls for the status flip (ADR-0012). It also means an abandoned checkout — payment never completed — leaves a `pending` Booking still holding its dates; those are reclaimed by the next conflicting booking attempt once 15 minutes old, rather than through a scheduled cleanup job.

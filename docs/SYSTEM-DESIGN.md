@@ -142,12 +142,19 @@ listingId (string)
 userId (string)
 checkIn (string)
 checkOut (string)
+guests (number)
+guestName (string)
+guestEmail (string)
+nights (number)
 totalPrice (number)
-status (string)
+currency (string)
+status (string - `pending` or `confirmed`, see [ADR-0013](./adr/0013-two-phase-pending-confirmed-booking-flow.md))
 
 ### payment_details
 
 card_last_four_digits (string)
+
+Captured server-side once a Booking is confirmed (from the Stripe PaymentIntent's payment method), but not currently returned by any API response or shown in the UI — a gap against the "see the card I paid with" user story, left as a known follow-up rather than fixed as part of documenting the booking/payment flow (#34).
 
 ## API
 
@@ -252,38 +259,60 @@ country (string) - country for the user, for display purposes only (no currency 
 
 ### Create booking
 
+Booking a listing is a two-phase flow, not a single call — see [ADR-0013](./adr/0013-two-phase-pending-confirmed-booking-flow.md) for why. `POST /bookings` reserves the dates and starts a Stripe payment; the browser then confirms that payment itself, client-side, via Stripe Elements' `CardElement` ([ADR-0011](./adr/0011-card-only-payment-via-stripe-cardelement.md)); Stripe's own webhook is what ultimately confirms the Booking.
+
+#### Reserve dates and start payment
+
 `POST`
 `/bookings`
-Books a listing
+Requires a signed-in session. Creates the Booking as `pending` — which reserves the dates — and a Stripe PaymentIntent for its `totalPrice`. No payment details are ever sent in this request; the card is collected entirely client-side by Stripe Elements against the returned `clientSecret`.
 
-#### Parameters
+##### Parameters
 
 listingId (string)
-dates (object - `checkIn` and `checkOut`)
-paymentDetails (object - contains payment fields)
+checkIn (string)
+checkOut (string)
+guests (number)
+guestName (string)
+guestEmail (string)
 
-#### Sample response
+##### Sample response
 
 ```json
 {
-  "id": "456", // Booking ID.
-  "total_price": 400,
-  "currency": "USD",
-  "dates": {
-    "check_in": "2022-12-24",
-    "check_out": "2022-12-27"
+  "booking": {
+    "id": "456", // Booking ID.
+    "listingId": "561602",
+    "userId": "user_123",
+    "checkIn": "2026-08-05",
+    "checkOut": "2026-08-10",
+    "guests": 2,
+    "guestName": "Jane Doe",
+    "guestEmail": "jane@example.com",
+    "nights": 5,
+    "totalPrice": 410,
+    "currency": "EUR",
+    "status": "pending"
   },
-  "listing": {
-    "id": "561602"
-  },
-  "payment_details": {
-    // Only show the last 4 digits.
-    // We shouldn't be storing the credit card number
-    // unencrypted anyway.
-    "card_last_four_digits": "1234"
-  }
+  // Passed to Stripe Elements in the browser to confirm the PaymentIntent —
+  // never used server-side beyond this.
+  "clientSecret": "pi_xxx_secret_yyy"
 }
 ```
+
+If the requested dates overlap an existing `pending` or `confirmed` Booking for the same listing, this returns `409`. The one exception: a colliding `pending` Booking older than 15 minutes is treated as an abandoned checkout and is reclaimed automatically (deleted, then the insert retried) rather than blocking the new request — no scheduled cleanup job is needed for this.
+
+#### Fetch a booking
+
+`GET`
+`/bookings/{bookingId}`
+Returns the Booking above by id, `status` included — this is how a client observes the `pending` → `confirmed` transition once the browser has redirected back from confirming payment (see the confirmation page's polling, [ADR-0012](./adr/0012-poll-a-server-action-for-pending-booking-confirmation.md)).
+
+#### Confirm payment (Stripe → server)
+
+`POST`
+`/webhooks/stripe`
+Not called by any client — Stripe calls this directly once payment succeeds. The signature is verified against Stripe's own signing secret before anything else happens. On a verified `payment_intent.succeeded` event, the matching Booking (found via the PaymentIntent's metadata) is flipped from `pending` to `confirmed` and the booking confirmation email is sent; a redelivery of an already-processed event is a no-op. If the Booking no longer exists (its hold was already reclaimed before payment completed), the charge is refunded automatically instead.
 
 ## Search engine optimisation (SEO)
 
