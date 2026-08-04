@@ -3,7 +3,7 @@ import { bookings, listings, user } from '@travel-booking/api/src/db/schema.ts';
 import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { expect, test as base, type Frame, type Page } from '@playwright/test';
+import { expect, test as base, type Page } from '@playwright/test';
 
 // A real listing/user pair, isolated per test by a title/email unique to
 // this run — same "own marker data, not the global seed" convention
@@ -98,50 +98,25 @@ export async function seedBooking(
   await db.insert(bookings).values(booking);
 }
 
-// Stripe's real Payment Element (mounted against a live clientSecret — see
-// #33) renders its card fields inside a deeply nested, cross-origin
-// js.stripe.com iframe several levels below the top-level "Secure payment
-// input frame" iframe the page itself renders, well past what
-// page.frameLocator's single-selector API can reach. page.frames() returns
-// every frame in the tree flattened, regardless of nesting depth, so
-// matching by URL substring here is the reliable way in — the frame only
-// exists once Stripe has finished mounting, hence the poll rather than a
-// single frames() read.
-async function findStripeFrame(page: Page, pattern: RegExp, timeoutMs = 15000): Promise<Frame> {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    const frame = page.frames().find((f) => pattern.test(f.url()));
-    if (frame) {
-      return frame;
-    }
-    await page.waitForTimeout(200);
-  }
-  throw new Error(`No frame matching ${pattern} appeared within ${timeoutMs}ms`);
-}
-
-// The Payment Element starts collapsed to a list of payment method tabs
-// (Card, Bancontact, ...); the card number/expiry/cvc fields only render
-// once "Card" itself is expanded. Only needed once per booking — expanding
-// again after a decline would remount the tab and lose what's already
-// mounted, so retries call fillCardDetails directly instead.
-export async function expandCardTab(page: Page): Promise<void> {
-  const accessoryFrame = await findStripeFrame(page, /elements-inner-accessory-target/);
-  await accessoryFrame.getByText('Card', { exact: true }).click();
-}
-
+// Stripe's real CardElement (mounted against a live clientSecret — see #33,
+// switched from PaymentElement in ADR-0011) renders its card fields inside a
+// single cross-origin js.stripe.com iframe, mounted directly into the
+// `#card-element` container PaymentStep.tsx gives it — no accordion tab to
+// expand first, and no extra nesting level to search past. frameLocator
+// scoped to that container id resolves it directly (with its own built-in
+// wait for the frame to appear), unlike PaymentElement's nested
+// elements-inner-accessory-target frame this used to need page.frames()
+// hunting for. Stripe also injects several unrelated top-level iframes onto
+// the page for its own fraud tooling (m-outer, hcaptcha, ...) — scoping by
+// container avoids depending on knowing which of those to ignore.
 export async function fillCardDetails(page: Page, cardNumber: string): Promise<void> {
-  const accessoryFrame = await findStripeFrame(page, /elements-inner-accessory-target/);
-  await accessoryFrame.locator('input[name="number"]').fill(cardNumber);
-  await accessoryFrame.locator('input[name="expiry"]').fill('12/34');
-  await accessoryFrame.locator('input[name="cvc"]').fill('123');
+  const cardFrame = page.frameLocator('#card-element iframe');
+  await cardFrame.locator('input[name="cardnumber"]').fill(cardNumber);
+  await cardFrame.locator('input[name="exp-date"]').fill('12/34');
+  await cardFrame.locator('input[name="cvc"]').fill('123');
 }
 
-// Happy-path helper for tests that only need a single successful charge —
-// tests exercising a decline/retry sequence call expandCardTab and
-// fillCardDetails directly instead, since expanding a second time would
-// remount the tab.
 export async function payWithTestCard(page: Page, cardNumber: string): Promise<void> {
-  await expandCardTab(page);
   await fillCardDetails(page, cardNumber);
   await page.getByRole('button', { name: 'Pay now' }).click();
 }

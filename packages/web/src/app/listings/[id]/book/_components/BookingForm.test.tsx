@@ -8,6 +8,11 @@ vi.mock('../_actions', () => ({
   submitBooking: vi.fn(async () => null),
 }));
 
+const pushMock = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: pushMock }),
+}));
+
 // The Next.js font loader transform only runs inside Next's own build, not
 // under Vitest, so next/font/google resolves to no usable export here.
 vi.mock('next/font/google', () => ({
@@ -22,7 +27,7 @@ vi.mock('@stripe/stripe-js', () => ({
 }));
 vi.mock('@stripe/react-stripe-js', () => ({
   Elements: ({ children }: { children: React.ReactNode }) => children,
-  PaymentElement: () => <div data-testid="payment-element" />,
+  CardElement: () => <div data-testid="card-element" />,
   useStripe: () => null,
   useElements: () => null,
 }));
@@ -235,7 +240,7 @@ describe('BookingForm', () => {
 
     await user.click(screen.getByRole('button', { name: 'Confirm booking' }));
 
-    expect(await screen.findByTestId('payment-element')).toBeInTheDocument();
+    expect(await screen.findByTestId('card-element')).toBeInTheDocument();
     expect(screen.queryByLabelText('Full name')).not.toBeInTheDocument();
   });
 });

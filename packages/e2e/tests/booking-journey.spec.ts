@@ -1,5 +1,4 @@
 import {
-  expandCardTab,
   expect,
   expectFormAlert,
   fillCardDetails,
@@ -23,7 +22,7 @@ function isoDateDaysFromNow(days: number): string {
 
 test('search, sign in, and book a stay end to end', async ({ page, bookingJourney }) => {
   // Playwright's 30s default test timeout caps every assertion's own
-  // {timeout: ...} at whatever's left of it — confirmPayment is a real round
+  // {timeout: ...} at whatever's left of it — confirmCardPayment is a real round
   // trip to Stripe's API, not a mock, so this test needs more headroom than
   // the surrounding UI navigation alone would.
   test.setTimeout(60_000);
@@ -66,8 +65,8 @@ test('search, sign in, and book a stay end to end', async ({ page, bookingJourne
   // Confirmation. Scoped to `main`, not `page` — the signed-in user's own
   // name/email also render in the header nav, so an unscoped getByText would
   // ambiguously match both that and the guest details below. A generous
-  // timeout: confirmPayment is a real round trip to Stripe's API, not a
-  // mock, and the redirect only fires once that resolves.
+  // timeout: confirmCardPayment is a real round trip to Stripe's API, not a
+  // mock, and the router.push navigation only fires once that resolves.
   await expect(page).toHaveURL(/\/bookings\/[^/]+$/, { timeout: 30000 });
   const main = page.getByRole('main');
   // This env's Stripe webhook secret isn't real (no `stripe listen` running
@@ -103,13 +102,12 @@ test('a declined card can be retried on the same booking without losing the held
   await page.getByRole('button', { name: 'Confirm booking' }).click();
 
   await expect(page.getByRole('heading', { name: 'Payment' })).toBeVisible();
-  await expandCardTab(page);
   await fillCardDetails(page, CARD_DECLINE);
   await page.getByRole('button', { name: 'Pay now' }).click();
   // Scoped to `form`, not `page` — same reasoning as expectFormAlert above:
   // Next's own route announcer div also has role="alert", and an unscoped
   // wait can resolve against that instead of the real decline error,
-  // racing ahead of confirmPayment actually returning.
+  // racing ahead of confirmCardPayment actually returning.
   await expect(page.locator('form').getByRole('alert')).toHaveText(/declined/i, {
     timeout: 30000,
   });
@@ -123,7 +121,7 @@ test('a declined card can be retried on the same booking without losing the held
   await page.getByRole('button', { name: 'Pay now' }).click();
 
   // Two sequential real Stripe round trips in this test (decline, then
-  // retry) — generous timeout for the second confirmPayment to resolve.
+  // retry) — generous timeout for the second confirmCardPayment to resolve.
   await expect(page).toHaveURL(/\/bookings\/[^/]+$/, { timeout: 30000 });
 });
 
@@ -154,7 +152,7 @@ test('shows a conflict error and recovers when booking dates overlap an existing
   page,
   bookingJourney,
 }) => {
-  // Ends with a real Stripe confirmPayment round trip — see the note on the
+  // Ends with a real Stripe confirmCardPayment round trip — see the note on the
   // first test.
   test.setTimeout(60_000);
   const { listing, user, db } = bookingJourney;
@@ -198,7 +196,7 @@ test('shows a conflict error and recovers when booking dates overlap an existing
   await expect(page.getByRole('heading', { name: 'Payment' })).toBeVisible();
   await payWithTestCard(page, CARD_SUCCESS);
 
-  // Generous timeout: confirmPayment is a real round trip to Stripe's API,
+  // Generous timeout: confirmCardPayment is a real round trip to Stripe's API,
   // not a mock, and the redirect only fires once that resolves.
   await expect(page).toHaveURL(/\/bookings\/[^/]+$/, { timeout: 30000 });
 });

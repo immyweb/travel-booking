@@ -41,6 +41,7 @@ describe('createStripePaymentProvider', () => {
         amount: 50000,
         currency: 'eur',
         metadata: { bookingId: 'booking-1' },
+        payment_method_types: ['card'],
       });
       expect(result).toEqual({ id: 'pi_123', clientSecret: 'pi_123_secret_test' });
     });

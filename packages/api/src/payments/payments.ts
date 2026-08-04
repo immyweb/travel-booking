@@ -40,6 +40,10 @@ export function createStripePaymentProvider(
         // bookings tables store currency uppercase (e.g. 'EUR').
         currency: currency.toLowerCase(),
         metadata,
+        // Card-only by product decision (ADR-0011) — the frontend only ever
+        // mounts a CardElement, so this keeps the PaymentIntent's allowed
+        // methods in sync with what it can actually receive.
+        payment_method_types: ['card'],
       });
 
       // Only absent for PaymentIntents created with certain non-default
