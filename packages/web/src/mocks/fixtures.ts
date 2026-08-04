@@ -1,6 +1,7 @@
 import type {
   Booking,
   CityCentroid,
+  CreateBookingResponse,
   ListingDetail,
   SearchResponse,
   SessionUser,
@@ -41,6 +42,15 @@ export const FIXTURE_BOOKING: Booking = {
   totalPrice: 410,
   currency: 'EUR',
   status: 'confirmed',
+};
+
+// POST /bookings' actual envelope (see CreateBookingResponseSchema) — a
+// freshly created Booking is always 'pending' until the Stripe webhook (#32)
+// confirms it, unlike FIXTURE_BOOKING above (which models the settled,
+// already-'confirmed' case GET /bookings/:id and /bookings/mine return).
+export const FIXTURE_CREATE_BOOKING_RESPONSE: CreateBookingResponse = {
+  booking: { ...FIXTURE_BOOKING, status: 'pending' },
+  clientSecret: 'pi_fixture_secret_test',
 };
 
 export const FIXTURE_SESSION_USER: SessionUser = {

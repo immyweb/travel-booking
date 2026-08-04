@@ -1,6 +1,7 @@
 import {
   BookingSchema,
   CitiesResponseSchema,
+  CreateBookingResponseSchema,
   ListingDetailSchema,
   SearchResponseSchema,
   SessionUserSchema,
@@ -114,13 +115,8 @@ export async function createBooking(input: ClientCreateBooking): Promise<CreateB
     await failed('POST /bookings', response);
   }
 
-  // Stale on the real api as of #31: POST /bookings now responds
-  // { booking (status: 'pending'), clientSecret } rather than a bare
-  // Booking — this parse will throw against the real endpoint until the
-  // Stripe Elements client integration (#33) reads clientSecret and confirms
-  // payment before treating the booking as done. Only MSW's mocked pre-#31
-  // shape (see mocks/handlers.ts) keeps this passing today.
-  return { ok: true, booking: BookingSchema.parse(await response.json()) };
+  const { booking, clientSecret } = CreateBookingResponseSchema.parse(await response.json());
+  return { ok: true, booking, clientSecret };
 }
 
 // A booking confirmation link has no auth/ownership check (email is the only

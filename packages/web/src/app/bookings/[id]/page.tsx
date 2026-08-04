@@ -40,6 +40,12 @@ export default async function BookingConfirmationPage({ params }: BookingConfirm
     notFound();
   }
 
+  // Landed on straight after the Stripe redirect, the webhook that flips
+  // status to 'confirmed' (see #32) may not have processed yet — this isn't
+  // a broken or stuck booking, so it gets its own distinct state rather than
+  // rendering the confirmed view against a still-pending Booking.
+  const isPending = booking.status === 'pending';
+
   return (
     <main className="flex flex-1 flex-col bg-limestone">
       <div className="motion-safe:animate-[rise-in_0.5s_ease-out] mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-12 sm:py-16">
@@ -50,8 +56,13 @@ export default async function BookingConfirmationPage({ params }: BookingConfirm
           <h1
             className={`${displayFont.className} text-3xl font-semibold text-azulejo sm:text-4xl`}
           >
-            Booking confirmed
+            {isPending ? 'Confirming your payment…' : 'Booking confirmed'}
           </h1>
+          {isPending && (
+            <p className="text-sm text-muted-foreground">
+              This can take a few moments — refresh the page shortly if it doesn&apos;t update.
+            </p>
+          )}
         </div>
 
         <ListingSummaryCard title={listing.title} image={listing.images[0]!}>

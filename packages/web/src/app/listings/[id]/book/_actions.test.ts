@@ -1,19 +1,10 @@
 import type { Booking, ClientCreateBooking } from '@travel-booking/core';
 import { http, HttpResponse } from 'msw';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { server } from '@/mocks/server';
 import { submitBooking } from './_actions';
 
 const API_URL = 'http://localhost:4000';
-
-const redirectMock = vi.fn((path: string) => {
-  // Mirrors next/navigation's real redirect(), which throws to halt
-  // execution — the action relies on this to skip past the return statement.
-  throw new Error(`NEXT_REDIRECT: ${path}`);
-});
-vi.mock('next/navigation', () => ({
-  redirect: (path: string) => redirectMock(path),
-}));
 
 // Deliberately different from mocks/fixtures' FIXTURE_BOOKING — a UUID
 // listingId, to match what the real createBooking input schema expects.
@@ -38,12 +29,10 @@ const BOOKING: Booking = {
   nights: 5,
   totalPrice: 410,
   currency: 'EUR',
-  status: 'confirmed',
+  status: 'pending',
 };
 
-beforeEach(() => {
-  redirectMock.mockClear();
-});
+const CLIENT_SECRET = 'pi_test_secret';
 
 describe('submitBooking', () => {
   it('returns a validation error without calling createBooking when a field is missing', async () => {
@@ -54,13 +43,16 @@ describe('submitBooking', () => {
     server.use(
       http.post(`${API_URL}/bookings`, () => {
         createBookingSpy();
-        return HttpResponse.json(BOOKING, { status: 201 });
+        return HttpResponse.json(
+          { booking: BOOKING, clientSecret: CLIENT_SECRET },
+          { status: 201 },
+        );
       }),
     );
 
     const state = await submitBooking(null, { ...VALID_INPUT, guestName: '' });
 
-    expect(state?.error).toBeTruthy();
+    expect(state?.status).toBe('error');
     expect(createBookingSpy).not.toHaveBeenCalled();
   });
 
@@ -69,7 +61,10 @@ describe('submitBooking', () => {
     server.use(
       http.post(`${API_URL}/bookings`, () => {
         createBookingSpy();
-        return HttpResponse.json(BOOKING, { status: 201 });
+        return HttpResponse.json(
+          { booking: BOOKING, clientSecret: CLIENT_SECRET },
+          { status: 201 },
+        );
       }),
     );
 
@@ -79,19 +74,27 @@ describe('submitBooking', () => {
       checkOut: '2026-08-05',
     });
 
-    expect(state?.error).toBeTruthy();
+    expect(state?.status).toBe('error');
     expect(createBookingSpy).not.toHaveBeenCalled();
   });
 
-  it('redirects to the new booking on success', async () => {
-    server.use(http.post(`${API_URL}/bookings`, () => HttpResponse.json(BOOKING, { status: 201 })));
+  it('returns an awaitingPayment state carrying the bookingId and clientSecret on success', async () => {
+    server.use(
+      http.post(`${API_URL}/bookings`, () =>
+        HttpResponse.json({ booking: BOOKING, clientSecret: CLIENT_SECRET }, { status: 201 }),
+      ),
+    );
 
-    await expect(submitBooking(null, VALID_INPUT)).rejects.toThrow('NEXT_REDIRECT');
+    const state = await submitBooking(null, VALID_INPUT);
 
-    expect(redirectMock).toHaveBeenCalledWith(`/bookings/${BOOKING.id}`);
+    expect(state).toEqual({
+      status: 'awaitingPayment',
+      bookingId: BOOKING.id,
+      clientSecret: CLIENT_SECRET,
+    });
   });
 
-  it('returns an inline error and does not redirect on a conflict', async () => {
+  it('returns an inline error on a conflict', async () => {
     server.use(
       http.post(`${API_URL}/bookings`, () =>
         HttpResponse.json({ error: { message: 'conflict' } }, { status: 409 }),
@@ -100,11 +103,11 @@ describe('submitBooking', () => {
 
     const state = await submitBooking(null, VALID_INPUT);
 
-    expect(state?.error).toMatch(/no longer available/i);
-    expect(redirectMock).not.toHaveBeenCalled();
+    expect(state?.status).toBe('error');
+    expect(state).toMatchObject({ error: expect.stringMatching(/no longer available/i) });
   });
 
-  it("returns the api's message and does not redirect when the api rejects as invalid", async () => {
+  it("returns the api's message when the api rejects as invalid", async () => {
     server.use(
       http.post(`${API_URL}/bookings`, () =>
         HttpResponse.json(
@@ -116,7 +119,9 @@ describe('submitBooking', () => {
 
     const state = await submitBooking(null, VALID_INPUT);
 
-    expect(state?.error).toBe("guests exceeds this listing's maxGuests (4)");
-    expect(redirectMock).not.toHaveBeenCalled();
+    expect(state).toEqual({
+      status: 'error',
+      error: "guests exceeds this listing's maxGuests (4)",
+    });
   });
 });

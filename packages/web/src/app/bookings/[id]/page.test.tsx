@@ -98,6 +98,22 @@ describe('BookingConfirmationPage', () => {
 
     expect(notFoundMock).toHaveBeenCalled();
   });
+
+  it('shows a distinct confirming-payment state, not the confirmed view, for a still-pending booking', async () => {
+    server.use(
+      http.get(`${API_URL}/bookings/:id`, () =>
+        HttpResponse.json({ ...FIXTURE_BOOKING, status: 'pending' }),
+      ),
+    );
+
+    const ui = await BookingConfirmationPage({
+      params: Promise.resolve({ id: FIXTURE_BOOKING.id }),
+    });
+    render(ui);
+
+    expect(screen.getByRole('heading', { name: /confirming your payment/i })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Booking confirmed' })).not.toBeInTheDocument();
+  });
 });
 
 describe('generateMetadata', () => {

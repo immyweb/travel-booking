@@ -14,6 +14,19 @@ vi.mock('next/font/google', () => ({
   Bricolage_Grotesque: () => ({ className: 'font-display-mock' }),
 }));
 
+// Real Stripe.js would inject a script/iframe pointing at js.stripe.com,
+// which jsdom can't load — these tests only need to prove BookingForm hands
+// off to the payment step, not exercise Stripe's own UI.
+vi.mock('@stripe/stripe-js', () => ({
+  loadStripe: () => Promise.resolve(null),
+}));
+vi.mock('@stripe/react-stripe-js', () => ({
+  Elements: ({ children }: { children: React.ReactNode }) => children,
+  PaymentElement: () => <div data-testid="payment-element" />,
+  useStripe: () => null,
+  useElements: () => null,
+}));
+
 const LISTING_ID = '11111111-1111-4111-8111-111111111111';
 
 // The signed-in User's own name/email, as passed down from the booking
@@ -182,6 +195,7 @@ describe('BookingForm', () => {
 
   it('shows the error returned by the Server Action (e.g. a 409 conflict)', async () => {
     vi.mocked(submitBooking).mockResolvedValue({
+      status: 'error',
       error: 'Sorry, these dates are no longer available for this listing.',
     });
     const user = userEvent.setup();
@@ -199,5 +213,29 @@ describe('BookingForm', () => {
     await user.click(screen.getByRole('button', { name: 'Confirm booking' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/no longer available/i);
+  });
+
+  it('renders the payment step instead of the details form once the booking is created', async () => {
+    vi.mocked(submitBooking).mockResolvedValue({
+      status: 'awaitingPayment',
+      bookingId: 'booking-1',
+      clientSecret: 'pi_test_secret',
+    });
+    const user = userEvent.setup();
+    render(
+      <BookingForm
+        listingId={LISTING_ID}
+        maxGuests={4}
+        checkIn="2026-08-05"
+        checkOut="2026-08-10"
+        guests={2}
+        {...SIGNED_IN_USER}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Confirm booking' }));
+
+    expect(await screen.findByTestId('payment-element')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Full name')).not.toBeInTheDocument();
   });
 });

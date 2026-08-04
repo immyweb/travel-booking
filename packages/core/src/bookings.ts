@@ -86,6 +86,6 @@ export type CreateBookingResponse = z.infer<typeof CreateBookingResponseSchema>;
 // (400, e.g. guests over the listing's maxGuests) — both re-render the
 // booking form rather than being treated as failures.
 export type CreateBookingResult =
-  | { ok: true; booking: Booking }
+  | { ok: true; booking: Booking; clientSecret: string }
   | { ok: false; reason: 'conflict' }
   | { ok: false; reason: 'invalid'; message: string };

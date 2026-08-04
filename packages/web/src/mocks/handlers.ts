@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw';
 import {
   FIXTURE_BOOKING,
   FIXTURE_CITIES,
+  FIXTURE_CREATE_BOOKING_RESPONSE,
   FIXTURE_LISTING,
   FIXTURE_SEARCH_RESPONSE,
   FIXTURE_SESSION_USER,
@@ -21,7 +22,9 @@ export const handlers = [
 
   http.get(`${API_URL}/listings/:id`, () => HttpResponse.json(FIXTURE_LISTING)),
 
-  http.post(`${API_URL}/bookings`, () => HttpResponse.json(FIXTURE_BOOKING, { status: 201 })),
+  http.post(`${API_URL}/bookings`, () =>
+    HttpResponse.json(FIXTURE_CREATE_BOOKING_RESPONSE, { status: 201 }),
+  ),
 
   http.get(`${API_URL}/bookings/mine`, () => HttpResponse.json([])),
 

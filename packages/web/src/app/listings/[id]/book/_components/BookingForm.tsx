@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { submitBooking, type BookingFormState } from '../_actions';
+import { PaymentStep } from './PaymentStep';
 
 type BookingFormProps = {
   listingId: string;
@@ -90,8 +91,15 @@ export function BookingForm({
     });
   }
 
+  // Booking creation succeeded — hand off to Stripe Elements for payment
+  // rather than rendering the details form again; the details are already
+  // locked in via the created (still-'pending') Booking.
+  if (state?.status === 'awaitingPayment') {
+    return <PaymentStep bookingId={state.bookingId} clientSecret={state.clientSecret} />;
+  }
+
   const fieldError = FIELD_ORDER.map((field) => errors[field]?.message).find(Boolean);
-  const error = fieldError ?? state?.error;
+  const error = fieldError ?? (state?.status === 'error' ? state.error : undefined);
 
   return (
     <div className="flex flex-col gap-4">

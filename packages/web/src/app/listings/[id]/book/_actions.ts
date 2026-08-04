@@ -1,10 +1,12 @@
 'use server';
 
 import { ClientCreateBookingSchema, type ClientCreateBooking } from '@travel-booking/core';
-import { redirect } from 'next/navigation';
 import { createBooking } from '@/lib/api';
 
-export type BookingFormState = { error: string } | null;
+export type BookingFormState =
+  | { status: 'error'; error: string }
+  | { status: 'awaitingPayment'; bookingId: string; clientSecret: string }
+  | null;
 
 // The form is React Hook Form-managed and already validates against this
 // same schema client-side, but a Server Action is a reachable POST endpoint
@@ -13,6 +15,14 @@ export type BookingFormState = { error: string } | null;
 // trusted as already-shaped. Beyond that, this defers to the api's own
 // authoritative checks (listing existence, maxGuests, the #16 EXCLUDE
 // constraint, and — new in #28 — the signed-in session) via createBooking.
+//
+// Unlike before #33, this no longer redirect()s on success: the created
+// Booking is held 'pending' until payment is confirmed, and that
+// confirmation (stripe.confirmPayment against clientSecret) has to happen
+// client-side with a live Stripe.js instance — a Server Action can't drive
+// that. So this hands the clientSecret back to the client component, which
+// mounts Stripe Elements and confirms payment itself; Stripe's own
+// return_url is what eventually navigates to the Booking's page.
 export async function submitBooking(
   _prevState: BookingFormState,
   input: ClientCreateBooking,
@@ -20,12 +30,16 @@ export async function submitBooking(
   const parsed = ClientCreateBookingSchema.safeParse(input);
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? 'Please check the booking details.' };
+    return {
+      status: 'error',
+      error: parsed.error.issues[0]?.message ?? 'Please check the booking details.',
+    };
   }
 
   const result = await createBooking(parsed.data);
   if (!result.ok) {
     return {
+      status: 'error',
       error:
         result.reason === 'conflict'
           ? 'Sorry, these dates are no longer available for this listing.'
@@ -33,8 +47,9 @@ export async function submitBooking(
     };
   }
 
-  // Called outside any try/catch: redirect() works by throwing a control-flow
-  // exception, so wrapping it would swallow the navigation instead of letting
-  // it happen.
-  redirect(`/bookings/${result.booking.id}`);
+  return {
+    status: 'awaitingPayment',
+    bookingId: result.booking.id,
+    clientSecret: result.clientSecret,
+  };
 }

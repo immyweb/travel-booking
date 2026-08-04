@@ -16,6 +16,7 @@ import {
 import {
   FIXTURE_BOOKING,
   FIXTURE_CITIES,
+  FIXTURE_CREATE_BOOKING_RESPONSE,
   FIXTURE_LISTING,
   FIXTURE_SEARCH_RESPONSE,
   FIXTURE_SESSION_USER,
@@ -209,10 +210,11 @@ const CREATE_BOOKING: ClientCreateBooking = {
 };
 
 describe('createBooking', () => {
-  it('returns the parsed booking on success', async () => {
+  it('returns the parsed booking and clientSecret on success', async () => {
     await expect(createBooking(CREATE_BOOKING)).resolves.toEqual({
       ok: true,
-      booking: FIXTURE_BOOKING,
+      booking: FIXTURE_CREATE_BOOKING_RESPONSE.booking,
+      clientSecret: FIXTURE_CREATE_BOOKING_RESPONSE.clientSecret,
     });
   });
 
@@ -222,7 +224,7 @@ describe('createBooking', () => {
     server.use(
       http.post(`${API_URL}/bookings`, async ({ request }) => {
         capturedRequest = request.clone();
-        return HttpResponse.json(FIXTURE_BOOKING, { status: 201 });
+        return HttpResponse.json(FIXTURE_CREATE_BOOKING_RESPONSE, { status: 201 });
       }),
     );
 
