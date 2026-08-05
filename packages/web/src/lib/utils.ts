@@ -47,6 +47,9 @@ export function carryDatesAndGuests(selection: {
 // Shared by /[city]/stays' generateStaticParams and its request-time slug
 // matching (ADR-0007), so a given city always resolves to the same slug and
 // the two can never drift apart.
+// U+0300-U+036F, the accents/diacritics NFKD decomposition splits off
+// (e.g. "ã" -> "a" + U+0303) — stripped so "São Paulo" slugifies to
+// "sao-paulo" rather than keeping the accent as a stray character.
 const COMBINING_DIACRITICAL_MARKS = /[̀-ͯ]/g;
 
 export function slugify(value: string): string {
