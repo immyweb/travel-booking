@@ -1,7 +1,7 @@
 'use client';
 
 import type { CityCentroid } from '@travel-booking/core';
-import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useRouter } from '@/i18n/navigation';
 import { searchHref } from '@/lib/utils';
 
 type HeroSearchFormProps = {
@@ -24,6 +25,7 @@ function cityKey(city: { city: string; country: string }) {
 }
 
 export function HeroSearchForm({ cities }: HeroSearchFormProps) {
+  const t = useTranslations('HeroSearchForm');
   const router = useRouter();
   const [selectedKey, setSelectedKey] = useState(cities[0] ? cityKey(cities[0]) : '');
   const [checkIn, setCheckIn] = useState('');
@@ -53,7 +55,7 @@ export function HeroSearchForm({ cities }: HeroSearchFormProps) {
     >
       <div className="flex flex-col gap-1.5">
         <Label id="hero-city-label" htmlFor="hero-city">
-          Where to?
+          {t('whereTo')}
         </Label>
         <Select value={selectedKey} onValueChange={setSelectedKey} disabled={cities.length === 0}>
           <SelectTrigger
@@ -61,7 +63,7 @@ export function HeroSearchForm({ cities }: HeroSearchFormProps) {
             aria-labelledby="hero-city-label hero-city-value"
             className="w-full"
           >
-            <SelectValue id="hero-city-value" placeholder="Choose a destination" />
+            <SelectValue id="hero-city-value" placeholder={t('choosePlaceholder')} />
           </SelectTrigger>
           <SelectContent>
             {cities.map((city) => (
@@ -73,7 +75,7 @@ export function HeroSearchForm({ cities }: HeroSearchFormProps) {
         </Select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="hero-check-in">Check-in</Label>
+        <Label htmlFor="hero-check-in">{t('checkIn')}</Label>
         <Input
           id="hero-check-in"
           type="date"
@@ -82,7 +84,7 @@ export function HeroSearchForm({ cities }: HeroSearchFormProps) {
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="hero-check-out">Check-out</Label>
+        <Label htmlFor="hero-check-out">{t('checkOut')}</Label>
         <Input
           id="hero-check-out"
           type="date"
@@ -91,12 +93,12 @@ export function HeroSearchForm({ cities }: HeroSearchFormProps) {
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="hero-guests">Guests</Label>
+        <Label htmlFor="hero-guests">{t('guests')}</Label>
         <Input
           id="hero-guests"
           type="number"
           min={1}
-          placeholder="2"
+          placeholder={t('guestsPlaceholder')}
           value={guests}
           onChange={(event) => setGuests(event.target.value)}
         />
@@ -107,7 +109,7 @@ export function HeroSearchForm({ cities }: HeroSearchFormProps) {
         disabled={!selectedCity}
         className="h-10 bg-terracotta text-white hover:bg-terracotta/90 focus-visible:ring-terracotta/40 lg:h-full"
       >
-        Search stays
+        {t('searchStays')}
       </Button>
     </form>
   );

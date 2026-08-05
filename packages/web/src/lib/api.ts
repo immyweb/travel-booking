@@ -16,6 +16,7 @@ import {
   type SearchResponse,
   type SessionUser,
 } from '@travel-booking/core';
+import { getTranslations } from 'next-intl/server';
 import { z } from 'zod';
 import { currentCookieHeader, forwardSetCookies } from '@/lib/cookies';
 import { betterAuthErrorMessageFrom, errorMessageFrom, failed } from '@/lib/errors';
@@ -112,20 +113,22 @@ export async function createBooking(input: ClientCreateBooking): Promise<CreateB
   });
 
   if (response.status === 401) {
+    const t = await getTranslations('ServerErrors');
     return {
       ok: false,
       reason: 'invalid',
-      message: 'Please sign in to complete your booking.',
+      message: t('bookingUnauthorized'),
     };
   }
   if (response.status === 409) {
     return { ok: false, reason: 'conflict' };
   }
   if (response.status === 400) {
+    const t = await getTranslations('ServerErrors');
     return {
       ok: false,
       reason: 'invalid',
-      message: await errorMessageFrom(response, 'Invalid booking details'),
+      message: await errorMessageFrom(response, t('bookingInvalidDefault')),
     };
   }
   if (!response.ok) {
@@ -182,9 +185,10 @@ export async function signUp(input: {
   });
 
   if (!response.ok) {
+    const t = await getTranslations('ServerErrors');
     return {
       ok: false,
-      message: await betterAuthErrorMessageFrom(response, 'Could not create your account.'),
+      message: await betterAuthErrorMessageFrom(response, t('signUpFailed')),
     };
   }
 
@@ -204,9 +208,10 @@ export async function signIn(input: {
   });
 
   if (!response.ok) {
+    const t = await getTranslations('ServerErrors');
     return {
       ok: false,
-      message: await betterAuthErrorMessageFrom(response, 'Invalid email or password.'),
+      message: await betterAuthErrorMessageFrom(response, t('signInInvalid')),
     };
   }
 

@@ -1,12 +1,18 @@
-import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import { Button } from '@/components/ui/button';
+import { Link } from '@/i18n/navigation';
 import { fetchSession } from '@/lib/api';
 import { submitSignOut } from './_actions';
 import { displayFont } from './fonts';
+import { LocaleSwitcher } from './LocaleSwitcher';
 import { TileMark } from './TileMark';
 
 export async function HomeHeader() {
-  const session = await fetchSession();
+  const [session, t, tCommon] = await Promise.all([
+    fetchSession(),
+    getTranslations('HomeHeader'),
+    getTranslations('Common'),
+  ]);
 
   return (
     <header className="sticky top-0 z-20 bg-azulejo text-white">
@@ -14,14 +20,15 @@ export async function HomeHeader() {
         <Link href="/" className="flex items-center gap-2.5">
           <TileMark className="size-6 text-gold" />
           <span className={`${displayFont.className} text-lg font-semibold tracking-tight`}>
-            Travel Booking
+            {tCommon('appName')}
           </span>
         </Link>
         <div className="flex items-center gap-4">
+          <LocaleSwitcher />
           {session ? (
             <>
               <span className="hidden text-sm text-white/80 sm:inline">
-                Welcome back,{' '}
+                {t('welcomeBack')}{' '}
                 <Link href="/my-bookings" className="font-medium text-white hover:underline">
                   {session.name}
                 </Link>
@@ -32,17 +39,17 @@ export async function HomeHeader() {
                   variant="ghost"
                   className="text-white hover:bg-white/10 hover:text-white"
                 >
-                  Sign out
+                  {tCommon('signOut')}
                 </Button>
               </form>
             </>
           ) : (
             <>
               <Link href="/sign-in" className="text-sm font-medium hover:underline">
-                Sign in
+                {tCommon('signIn')}
               </Link>
               <Link href="/sign-up" className="text-sm font-medium hover:underline">
-                Sign up
+                {tCommon('signUp')}
               </Link>
             </>
           )}
@@ -51,7 +58,7 @@ export async function HomeHeader() {
             size="lg"
             className="bg-white text-azulejo hover:bg-white/90 focus-visible:ring-white/50"
           >
-            <Link href="/search">Search stays</Link>
+            <Link href="/search">{tCommon('searchStays')}</Link>
           </Button>
         </div>
       </div>

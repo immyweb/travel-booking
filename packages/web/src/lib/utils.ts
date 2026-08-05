@@ -17,15 +17,6 @@ export function toInternalPath(path: string | undefined): string {
   return path;
 }
 
-// Shared by the Search amenities filter and the Listing Detail amenity list,
-// so both render the exact same labels from one implementation.
-export function amenityLabel(amenity: Amenity): string {
-  return amenity
-    .split('_')
-    .map((word) => word[0]!.toUpperCase() + word.slice(1))
-    .join(' ');
-}
-
 // Shared by Search's listing links and the Listing Detail page's "Book now"
 // link, so a guest's selected dates/guest count keep following them through
 // both hops without each call site re-deriving the same query string.

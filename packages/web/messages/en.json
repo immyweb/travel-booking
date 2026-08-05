@@ -1,0 +1,215 @@
+{
+  "Common": {
+    "appName": "Travel Booking",
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "signOut": "Sign out",
+    "searchStays": "Search stays",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "guests": "Guests",
+    "perNight": "/ night",
+    "nights": "{count, plural, one {# night} other {# nights}}",
+    "total": "{total} total"
+  },
+  "LocaleSwitcher": {
+    "label": "Switch language",
+    "en": "English",
+    "fr": "Français"
+  },
+  "HomeHeader": {
+    "welcomeBack": "Welcome back,"
+  },
+  "HomeFooter": {
+    "tagline": "Boutique stays across Portugal and France — booked direct, no faceless marketplace in between.",
+    "companyNavLabel": "Company",
+    "about": "About",
+    "terms": "Terms & conditions",
+    "privacy": "Privacy",
+    "accessibility": "Accessibility",
+    "cookies": "Cookies",
+    "copyright": "© {year} Travel Booking"
+  },
+  "HomePage": {
+    "heroTitle": "Rooftops in Lisbon. Hillsides in Sintra. Mornings in Paris.",
+    "heroSubtitle": "Search real stays across Lisbon, Cascais, Sintra and Paris, and book direct in minutes."
+  },
+  "HeroSearchForm": {
+    "whereTo": "Where to?",
+    "choosePlaceholder": "Choose a destination",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "guests": "Guests",
+    "guestsPlaceholder": "2",
+    "searchStays": "Search stays"
+  },
+  "DestinationsSection": {
+    "heading": "Browse by city",
+    "subheading": "Jump straight to a destination and see everything we list there — no dates or filters to set first.",
+    "browseStays": "Browse stays"
+  },
+  "DealsSection": {
+    "heading": "Deals on offer",
+    "subheading": "Real stays, straight from the destinations we cover — priced per night, no games.",
+    "priceFromPerNight": "From {price} / night"
+  },
+  "SearchPage": {
+    "resultsEyebrow": "Search results",
+    "staysInCity": "Stays in {city}, {country}",
+    "noDestinations": "No destinations available yet."
+  },
+  "CityPicker": {
+    "whereTo": "Where to?"
+  },
+  "AmenitiesFilter": {
+    "amenities": "Amenities",
+    "amenitiesCount": "Amenities ({count})"
+  },
+  "SearchResultsSection": {
+    "staysFound": "{count, plural, one {# stay found} other {# stays found}}",
+    "pagesNavLabel": "Search results pages",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {page} of {totalPages}"
+  },
+  "SearchEmptyState": {
+    "title": "No listings match your search",
+    "subtitle": "Try a different destination, or widen your dates and filters."
+  },
+  "SearchResults": {
+    "resultsLabel": "Search results",
+    "distanceAway": "{distance} km away",
+    "perNight": "/ night"
+  },
+  "CityStaysPage": {
+    "eyebrow": "Stays",
+    "staysInCity": "Stays in {city}, {country}",
+    "searchStaysInCity": "Search stays in {city}",
+    "metaTitle": "Stays in {city}, {country} | Travel Booking",
+    "metaDescription": "Browse stays in {city}, {country} on Travel Booking."
+  },
+  "ListingDetailPage": {
+    "sleepsUpTo": "Sleeps up to {count} guests",
+    "amenitiesHeading": "Amenities",
+    "perNight": "/ night",
+    "metaDescription": "{title} in {city}, {country} — {price} / night.",
+    "notAvailable": "Not available for these dates",
+    "bookNow": "Book now"
+  },
+  "Amenities": {
+    "wifi": "Wifi",
+    "breakfast_provided": "Breakfast provided",
+    "washer": "Washer",
+    "kitchen": "Kitchen",
+    "pool": "Pool",
+    "parking": "Parking"
+  },
+  "BookListingPage": {
+    "confirmBooking": "Confirm your booking",
+    "perNightSleeps": "{price} / night · Sleeps up to {count} guests",
+    "metaTitle": "Book {title}"
+  },
+  "BookingForm": {
+    "yourDetails": "Your details",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "guests": "Guests",
+    "guestsCount": "{count, plural, one {# guest} other {# guests}}",
+    "fullName": "Full name",
+    "email": "Email",
+    "confirmBooking": "Confirm booking",
+    "maxGuestsError": "This listing sleeps up to {count} guests."
+  },
+  "PaymentStep": {
+    "heading": "Payment",
+    "testCardHint": "Test card: 4242 4242 4242 4242 · Any future date · Any CVC",
+    "payNow": "Pay now",
+    "paymentFailed": "Your payment could not be confirmed. Please try again."
+  },
+  "BookingConfirmationPage": {
+    "confirmingPayment": "Confirming your payment…",
+    "bookingConfirmed": "Booking confirmed",
+    "guestDetailsHeading": "Guest details"
+  },
+  "PendingBookingWatcher": {
+    "checking": "This can take a few moments — refresh the page shortly if it doesn't update.",
+    "timedOut": "This is taking longer than expected. Try refreshing this page in a moment."
+  },
+  "MyBookingsPage": {
+    "eyebrow": "Travel Booking",
+    "staysCount": "{count, plural, one {# stay} other {# stays}}",
+    "heading": "My Bookings",
+    "bookingsListLabel": "Your bookings"
+  },
+  "MyBookingsEmptyState": {
+    "title": "No bookings yet",
+    "subtitle": "When you book a stay, it'll show up here."
+  },
+  "SignInPage": {
+    "eyebrow": "Travel Booking",
+    "heading": "Sign in",
+    "newHere": "New here?",
+    "createAccount": "Create an account"
+  },
+  "SignInForm": {
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "passwordRequired": "Please enter your password."
+  },
+  "SignUpPage": {
+    "eyebrow": "Travel Booking",
+    "heading": "Create your account",
+    "alreadyHaveAccount": "Already have an account?",
+    "signIn": "Sign in"
+  },
+  "SignUpForm": {
+    "fullName": "Full name",
+    "email": "Email",
+    "password": "Password",
+    "createAccount": "Create account",
+    "nameRequired": "Please enter your name.",
+    "passwordMinLength": "Password must be at least 8 characters."
+  },
+  "AboutPage": {
+    "title": "About Travel Booking",
+    "metaTitle": "About",
+    "paragraph1": "Travel Booking lists boutique stays across Portugal and France — Lisbon, Sintra, Cascais and Paris — and lets guests book them direct, with no marketplace standing in between.",
+    "paragraph2": "More about who's behind it will appear here."
+  },
+  "AccessibilityPage": {
+    "title": "Accessibility",
+    "metaTitle": "Accessibility",
+    "paragraph1": "We want Travel Booking to work for every guest, including those using a keyboard or a screen reader. If you run into a barrier, let us know and we'll fix it."
+  },
+  "CookiesPage": {
+    "title": "Cookies",
+    "metaTitle": "Cookies",
+    "paragraph1": "Details on the cookies Travel Booking uses will appear here."
+  },
+  "PrivacyPage": {
+    "title": "Privacy",
+    "metaTitle": "Privacy",
+    "paragraph1": "Details on how Travel Booking handles guest data will appear here."
+  },
+  "TermsPage": {
+    "title": "Terms & conditions",
+    "metaTitle": "Terms & conditions",
+    "paragraph1": "The full terms for booking a stay through Travel Booking will appear here."
+  },
+  "NotFoundPage": {
+    "heading": "We couldn't find that page",
+    "subheading": "It may have been removed, or the link might be broken.",
+    "backToSearch": "Back to search"
+  },
+  "ServerErrors": {
+    "signInInvalid": "Invalid email or password.",
+    "signUpFailed": "Could not create your account.",
+    "bookingUnauthorized": "Please sign in to complete your booking.",
+    "bookingInvalidDefault": "Invalid booking details",
+    "bookingConflict": "Sorry, these dates are no longer available for this listing.",
+    "invalidBookingDetails": "Please check the booking details.",
+    "invalidSignInDetails": "Please check your details.",
+    "invalidSignUpDetails": "Please check your details."
+  }
+}

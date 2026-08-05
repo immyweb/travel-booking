@@ -1,5 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { renderWithIntl as render } from '@/test-support/renderWithIntl';
 import { HomeFooter } from './HomeFooter';
 
 // The Next.js font loader transform only runs inside Next's own build, not

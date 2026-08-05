@@ -1,8 +1,9 @@
 'use client';
 
+import { useFormatter, useTranslations } from 'next-intl';
 import Image from 'next/image';
-import Link from 'next/link';
 import { use } from 'react';
+import { Link } from '@/i18n/navigation';
 import { displayFont } from './fonts';
 
 export type Deal = {
@@ -19,19 +20,13 @@ type DealsSectionProps = {
   dealsPromise: Promise<Deal[]>;
 };
 
-function formatPrice(price: number, currency: string): string {
-  return new Intl.NumberFormat('en', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 0,
-  }).format(price);
-}
-
 // Takes a promise, not resolved data, so the Suspense boundary in page.tsx
 // can stream the header/hero in immediately without waiting on this — same
 // pattern as Search's SearchResultsSection + resultsPromise.
 export function DealsSection({ dealsPromise }: DealsSectionProps) {
   const deals = use(dealsPromise);
+  const t = useTranslations('DealsSection');
+  const format = useFormatter();
 
   if (deals.length === 0) {
     return null;
@@ -41,11 +36,9 @@ export function DealsSection({ dealsPromise }: DealsSectionProps) {
     <section className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-20">
       <div className="mb-8 max-w-xl">
         <h2 className={`${displayFont.className} text-2xl font-semibold text-azulejo sm:text-3xl`}>
-          Deals on offer
+          {t('heading')}
         </h2>
-        <p className="mt-2 text-muted-foreground">
-          Real stays, straight from the destinations we cover — priced per night, no games.
-        </p>
+        <p className="mt-2 text-muted-foreground">{t('subheading')}</p>
       </div>
       <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {deals.map((deal, index) => (
@@ -68,7 +61,13 @@ export function DealsSection({ dealsPromise }: DealsSectionProps) {
               </p>
               <h3 className="mt-0.5 font-medium text-foreground">{deal.title}</h3>
               <p className="mt-0.5 font-mono text-sm text-muted-foreground">
-                From {formatPrice(deal.price, deal.currency)} / night
+                {t('priceFromPerNight', {
+                  price: format.number(deal.price, {
+                    style: 'currency',
+                    currency: deal.currency,
+                    maximumFractionDigits: 0,
+                  }),
+                })}
               </p>
             </Link>
           </li>

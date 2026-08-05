@@ -1,10 +1,11 @@
 'use client';
 
 import type { ListingSummary } from '@travel-booking/core';
+import { useFormatter, useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
-import Link from 'next/link';
 import { useState } from 'react';
+import { Link } from '@/i18n/navigation';
 import { carryDatesAndGuests } from '@/lib/utils';
 import { useIsDesktop } from '@/hooks/useIsDesktop';
 
@@ -26,6 +27,8 @@ const SearchResultsMap = dynamic(
 export function SearchResults({ results, checkIn, checkOut, guests }: SearchResultsProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const isDesktop = useIsDesktop();
+  const t = useTranslations('SearchResults');
+  const format = useFormatter();
 
   // Carries the guest's selected dates/guest count forward from Search so the
   // Listing Detail page can reflect them (same params Search's own filter
@@ -36,7 +39,7 @@ export function SearchResults({ results, checkIn, checkOut, guests }: SearchResu
 
   return (
     <div className="flex h-[520px] overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-azulejo/10 sm:h-[600px]">
-      <ol aria-label="Search results" className="w-full space-y-3 overflow-y-auto p-4 md:w-1/2">
+      <ol aria-label={t('resultsLabel')} className="w-full space-y-3 overflow-y-auto p-4 md:w-1/2">
         {results.map((listing) => (
           <li
             key={listing.id}
@@ -61,12 +64,17 @@ export function SearchResults({ results, checkIn, checkOut, guests }: SearchResu
               </div>
               <div className="flex flex-1 flex-col justify-center gap-0.5">
                 <p className="font-mono text-xs text-azulejo/60">
-                  {listing.distanceKm.toFixed(1)} km away
+                  {t('distanceAway', {
+                    distance: format.number(listing.distanceKm, {
+                      minimumFractionDigits: 1,
+                      maximumFractionDigits: 1,
+                    }),
+                  })}
                 </p>
                 <p className="text-sm font-medium text-foreground">{listing.title}</p>
                 <p className="font-mono text-sm font-semibold text-azulejo">
-                  {listing.price} {listing.currency}{' '}
-                  <span className="font-normal text-muted-foreground">/ night</span>
+                  {format.number(listing.price, { style: 'currency', currency: listing.currency })}{' '}
+                  <span className="font-normal text-muted-foreground">{t('perNight')}</span>
                 </p>
               </div>
             </Link>

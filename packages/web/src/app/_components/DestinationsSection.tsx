@@ -1,6 +1,7 @@
 import type { CityCentroid } from '@travel-booking/core';
 import { ArrowUpRight } from 'lucide-react';
-import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/navigation';
 import { slugify } from '@/lib/utils';
 import { displayFont } from './fonts';
 import { TileMark } from './TileMark';
@@ -21,6 +22,8 @@ const TILE_STYLES = [
 ] as const;
 
 export function DestinationsSection({ cities }: DestinationsSectionProps) {
+  const t = useTranslations('DestinationsSection');
+
   if (cities.length === 0) {
     return null;
   }
@@ -29,12 +32,9 @@ export function DestinationsSection({ cities }: DestinationsSectionProps) {
     <section className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-20">
       <div className="mb-8 max-w-xl">
         <h2 className={`${displayFont.className} text-2xl font-semibold text-azulejo sm:text-3xl`}>
-          Browse by city
+          {t('heading')}
         </h2>
-        <p className="mt-2 text-muted-foreground">
-          Jump straight to a destination and see everything we list there — no dates or filters to
-          set first.
-        </p>
+        <p className="mt-2 text-muted-foreground">{t('subheading')}</p>
       </div>
       <ul className="grid grid-cols-2 gap-1 overflow-hidden rounded-3xl bg-limestone lg:grid-cols-4">
         {cities.map((city, index) => {
@@ -54,7 +54,7 @@ export function DestinationsSection({ cities }: DestinationsSectionProps) {
                 <span className="relative">
                   <span className="block text-2xl font-semibold sm:text-3xl">{city.city}</span>
                   <span className="mt-2 inline-flex items-center gap-1 text-sm font-medium">
-                    Browse stays
+                    {t('browseStays')}
                     <ArrowUpRight
                       className="size-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
                       aria-hidden="true"

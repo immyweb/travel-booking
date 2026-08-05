@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import createNextIntlPlugin from 'next-intl/plugin';
 
 const nextConfig: NextConfig = {
   images: {
@@ -11,7 +12,14 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     optimizePackageImports: ['radix-ui'],
+    // The root layout lives under app/[locale] (ADR-0008), so there's no
+    // single layout.js Next.js can compose a 404 from for a request that
+    // resolves to no locale at all — see global-not-found.md's second
+    // bullet. app/global-not-found.tsx covers that case.
+    globalNotFound: true,
   },
 };
 
-export default nextConfig;
+const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
+
+export default withNextIntl(nextConfig);

@@ -1,0 +1,215 @@
+{
+  "Common": {
+    "appName": "Travel Booking",
+    "signIn": "Se connecter",
+    "signUp": "S'inscrire",
+    "signOut": "Se déconnecter",
+    "searchStays": "Rechercher un séjour",
+    "checkIn": "Arrivée",
+    "checkOut": "Départ",
+    "guests": "Voyageurs",
+    "perNight": "/ nuit",
+    "nights": "{count, plural, one {# nuit} other {# nuits}}",
+    "total": "{total} au total"
+  },
+  "LocaleSwitcher": {
+    "label": "Changer de langue",
+    "en": "English",
+    "fr": "Français"
+  },
+  "HomeHeader": {
+    "welcomeBack": "Bon retour,"
+  },
+  "HomeFooter": {
+    "tagline": "Des séjours de charme au Portugal et en France — réservés en direct, sans marketplace impersonnelle entre vous et l'hôte.",
+    "companyNavLabel": "Société",
+    "about": "À propos",
+    "terms": "Conditions générales",
+    "privacy": "Confidentialité",
+    "accessibility": "Accessibilité",
+    "cookies": "Cookies",
+    "copyright": "© {year} Travel Booking"
+  },
+  "HomePage": {
+    "heroTitle": "Des toits-terrasses à Lisbonne. Des collines à Sintra. Des matins à Paris.",
+    "heroSubtitle": "Recherchez de vrais séjours à Lisbonne, Cascais, Sintra et Paris, et réservez en direct en quelques minutes."
+  },
+  "HeroSearchForm": {
+    "whereTo": "Où partez-vous ?",
+    "choosePlaceholder": "Choisissez une destination",
+    "checkIn": "Arrivée",
+    "checkOut": "Départ",
+    "guests": "Voyageurs",
+    "guestsPlaceholder": "2",
+    "searchStays": "Rechercher un séjour"
+  },
+  "DestinationsSection": {
+    "heading": "Parcourir par ville",
+    "subheading": "Accédez directement à une destination et découvrez tout ce que nous y proposons — sans dates ni filtres à définir.",
+    "browseStays": "Voir les séjours"
+  },
+  "DealsSection": {
+    "heading": "Nos meilleures offres",
+    "subheading": "De vrais séjours, dans les destinations que nous couvrons — prix par nuit, sans arnaque.",
+    "priceFromPerNight": "À partir de {price} / nuit"
+  },
+  "SearchPage": {
+    "resultsEyebrow": "Résultats de recherche",
+    "staysInCity": "Séjours à {city}, {country}",
+    "noDestinations": "Aucune destination disponible pour le moment."
+  },
+  "CityPicker": {
+    "whereTo": "Où partez-vous ?"
+  },
+  "AmenitiesFilter": {
+    "amenities": "Équipements",
+    "amenitiesCount": "Équipements ({count})"
+  },
+  "SearchResultsSection": {
+    "staysFound": "{count, plural, one {# séjour trouvé} other {# séjours trouvés}}",
+    "pagesNavLabel": "Pages de résultats de recherche",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "pageOf": "Page {page} sur {totalPages}"
+  },
+  "SearchEmptyState": {
+    "title": "Aucun logement ne correspond à votre recherche",
+    "subtitle": "Essayez une autre destination, ou élargissez vos dates et filtres."
+  },
+  "SearchResults": {
+    "resultsLabel": "Résultats de recherche",
+    "distanceAway": "à {distance} km",
+    "perNight": "/ nuit"
+  },
+  "CityStaysPage": {
+    "eyebrow": "Séjours",
+    "staysInCity": "Séjours à {city}, {country}",
+    "searchStaysInCity": "Rechercher un séjour à {city}",
+    "metaTitle": "Séjours à {city}, {country} | Travel Booking",
+    "metaDescription": "Parcourez les séjours à {city}, {country} sur Travel Booking."
+  },
+  "ListingDetailPage": {
+    "sleepsUpTo": "Jusqu'à {count} voyageurs",
+    "amenitiesHeading": "Équipements",
+    "perNight": "/ nuit",
+    "metaDescription": "{title} à {city}, {country} — {price} / nuit.",
+    "notAvailable": "Non disponible à ces dates",
+    "bookNow": "Réserver"
+  },
+  "Amenities": {
+    "wifi": "Wifi",
+    "breakfast_provided": "Petit-déjeuner inclus",
+    "washer": "Lave-linge",
+    "kitchen": "Cuisine",
+    "pool": "Piscine",
+    "parking": "Parking"
+  },
+  "BookListingPage": {
+    "confirmBooking": "Confirmez votre réservation",
+    "perNightSleeps": "{price} / nuit · Jusqu'à {count} voyageurs",
+    "metaTitle": "Réserver {title}"
+  },
+  "BookingForm": {
+    "yourDetails": "Vos coordonnées",
+    "checkIn": "Arrivée",
+    "checkOut": "Départ",
+    "guests": "Voyageurs",
+    "guestsCount": "{count, plural, one {# voyageur} other {# voyageurs}}",
+    "fullName": "Nom complet",
+    "email": "E-mail",
+    "confirmBooking": "Confirmer la réservation",
+    "maxGuestsError": "Ce logement accueille jusqu'à {count} voyageurs."
+  },
+  "PaymentStep": {
+    "heading": "Paiement",
+    "testCardHint": "Carte de test : 4242 4242 4242 4242 · Toute date future · Tout CVC",
+    "payNow": "Payer",
+    "paymentFailed": "Votre paiement n'a pas pu être confirmé. Veuillez réessayer."
+  },
+  "BookingConfirmationPage": {
+    "confirmingPayment": "Confirmation de votre paiement…",
+    "bookingConfirmed": "Réservation confirmée",
+    "guestDetailsHeading": "Coordonnées du voyageur"
+  },
+  "PendingBookingWatcher": {
+    "checking": "Cela peut prendre quelques instants — actualisez la page dans un moment si rien ne se passe.",
+    "timedOut": "Cela prend plus de temps que prévu. Essayez d'actualiser cette page dans un instant."
+  },
+  "MyBookingsPage": {
+    "eyebrow": "Travel Booking",
+    "staysCount": "{count, plural, one {# séjour} other {# séjours}}",
+    "heading": "Mes réservations",
+    "bookingsListLabel": "Vos réservations"
+  },
+  "MyBookingsEmptyState": {
+    "title": "Aucune réservation pour le moment",
+    "subtitle": "Dès que vous réservez un séjour, il apparaîtra ici."
+  },
+  "SignInPage": {
+    "eyebrow": "Travel Booking",
+    "heading": "Se connecter",
+    "newHere": "Nouveau ici ?",
+    "createAccount": "Créer un compte"
+  },
+  "SignInForm": {
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "signIn": "Se connecter",
+    "passwordRequired": "Veuillez saisir votre mot de passe."
+  },
+  "SignUpPage": {
+    "eyebrow": "Travel Booking",
+    "heading": "Créez votre compte",
+    "alreadyHaveAccount": "Vous avez déjà un compte ?",
+    "signIn": "Se connecter"
+  },
+  "SignUpForm": {
+    "fullName": "Nom complet",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "createAccount": "Créer un compte",
+    "nameRequired": "Veuillez saisir votre nom.",
+    "passwordMinLength": "Le mot de passe doit contenir au moins 8 caractères."
+  },
+  "AboutPage": {
+    "title": "À propos de Travel Booking",
+    "metaTitle": "À propos",
+    "paragraph1": "Travel Booking répertorie des séjours de charme au Portugal et en France — Lisbonne, Sintra, Cascais et Paris — et permet aux voyageurs de réserver en direct, sans marketplace intermédiaire.",
+    "paragraph2": "Plus d'informations sur qui se cache derrière Travel Booking apparaîtront ici."
+  },
+  "AccessibilityPage": {
+    "title": "Accessibilité",
+    "metaTitle": "Accessibilité",
+    "paragraph1": "Nous voulons que Travel Booking fonctionne pour chaque voyageur, y compris ceux qui utilisent un clavier ou un lecteur d'écran. Si vous rencontrez un obstacle, faites-le-nous savoir et nous le corrigerons."
+  },
+  "CookiesPage": {
+    "title": "Cookies",
+    "metaTitle": "Cookies",
+    "paragraph1": "Les détails sur les cookies utilisés par Travel Booking apparaîtront ici."
+  },
+  "PrivacyPage": {
+    "title": "Confidentialité",
+    "metaTitle": "Confidentialité",
+    "paragraph1": "Les détails sur la façon dont Travel Booking traite les données des voyageurs apparaîtront ici."
+  },
+  "TermsPage": {
+    "title": "Conditions générales",
+    "metaTitle": "Conditions générales",
+    "paragraph1": "Les conditions complètes pour réserver un séjour via Travel Booking apparaîtront ici."
+  },
+  "NotFoundPage": {
+    "heading": "Nous n'avons pas trouvé cette page",
+    "subheading": "Elle a peut-être été supprimée, ou le lien est peut-être rompu.",
+    "backToSearch": "Retour à la recherche"
+  },
+  "ServerErrors": {
+    "signInInvalid": "E-mail ou mot de passe invalide.",
+    "signUpFailed": "Impossible de créer votre compte.",
+    "bookingUnauthorized": "Veuillez vous connecter pour finaliser votre réservation.",
+    "bookingInvalidDefault": "Détails de réservation invalides",
+    "bookingConflict": "Désolé, ces dates ne sont plus disponibles pour ce logement.",
+    "invalidBookingDetails": "Veuillez vérifier les détails de la réservation.",
+    "invalidSignInDetails": "Veuillez vérifier vos informations.",
+    "invalidSignUpDetails": "Veuillez vérifier vos informations."
+  }
+}

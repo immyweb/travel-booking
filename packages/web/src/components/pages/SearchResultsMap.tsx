@@ -2,10 +2,12 @@
 
 import type { ListingSummary } from '@travel-booking/core';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { useFormatter, useLocale } from 'next-intl';
 import type { Dispatch, SetStateAction } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Map, Marker } from 'react-map-gl/maplibre';
 import type { MapRef } from 'react-map-gl/maplibre';
+import { getPathname } from '@/i18n/navigation';
 import { applyBrandMapStyle } from './mapBrandStyle';
 
 // No API key/account needed — see ADR-0004.
@@ -29,6 +31,8 @@ export function SearchResultsMap({
 }: SearchResultsMapProps) {
   const mapRef = useRef<MapRef>(null);
   const [loaded, setLoaded] = useState(false);
+  const locale = useLocale();
+  const format = useFormatter();
 
   useEffect(() => {
     const map = mapRef.current?.getMap();
@@ -89,7 +93,17 @@ export function SearchResultsMap({
           // clustering, so nearby pins can overlap — lift the hovered one
           // above its neighbors so the highlight is actually visible.
           style={{ zIndex: activeId === listing.id ? 1 : 0 }}
-          onClick={() => window.open(getHref(listing.id), '_blank', 'noopener,noreferrer')}
+          // window.open does a real browser navigation rather than a
+          // client-side transition, so — unlike SearchResults' own <Link>,
+          // which the i18n navigation wrapper prefixes automatically — the
+          // locale prefix has to be resolved into the URL explicitly here.
+          onClick={() =>
+            window.open(
+              getPathname({ href: getHref(listing.id), locale }),
+              '_blank',
+              'noopener,noreferrer',
+            )
+          }
         >
           <div
             onMouseEnter={() => onHoverChange(listing.id)}
@@ -97,7 +111,7 @@ export function SearchResultsMap({
             data-active={activeId === listing.id}
             className="cursor-pointer rounded-full bg-terracotta px-2.5 py-1 text-xs font-semibold text-white shadow-md ring-2 ring-white/70 transition data-[active=true]:scale-110"
           >
-            {listing.price} {listing.currency}
+            {format.number(listing.price, { style: 'currency', currency: listing.currency })}
           </div>
         </Marker>
       ))}

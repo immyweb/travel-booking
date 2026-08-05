@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { server } from '@/mocks/server';
+import { renderWithIntl as render } from '@/test-support/renderWithIntl';
 import { HomeHeader } from './HomeHeader';
 
 const API_URL = 'http://localhost:4000';

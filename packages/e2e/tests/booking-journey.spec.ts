@@ -20,6 +20,13 @@ function isoDateDaysFromNow(days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+// Mirrors the locale-aware date formatting the booking confirmation page now
+// applies (#38) — the same `dateStyle: 'medium'` call, for the 'en' locale
+// this suite always runs against.
+function formatDate(iso: string): string {
+  return new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(iso));
+}
+
 test('search, sign in, and book a stay end to end', async ({ page, bookingJourney }) => {
   // Playwright's 30s default test timeout caps every assertion's own
   // {timeout: ...} at whatever's left of it — confirmCardPayment is a real round
@@ -76,7 +83,9 @@ test('search, sign in, and book a stay end to end', async ({ page, bookingJourne
   // confirmed one.
   await expect(main.getByRole('heading', { name: 'Confirming your payment…' })).toBeVisible();
   await expect(main.getByText(listing.title)).toBeVisible();
-  await expect(main.getByText(`${checkIn} – ${checkOut} · 3 nights`)).toBeVisible();
+  await expect(
+    main.getByText(`${formatDate(checkIn)} – ${formatDate(checkOut)} · 3 nights`),
+  ).toBeVisible();
   await expect(main.getByText(user.name)).toBeVisible();
   await expect(main.getByText(user.email)).toBeVisible();
 });

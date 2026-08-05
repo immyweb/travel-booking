@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { getLocale } from 'next-intl/server';
+import { redirect } from '@/i18n/navigation';
 import { signOut } from '@/lib/api';
 
 // Colocated with HomeHeader.tsx (the one place sign-out is offered) rather
@@ -12,5 +13,6 @@ export async function submitSignOut(): Promise<void> {
   // Called outside any try/catch: redirect() works by throwing a control-flow
   // exception, so wrapping it would swallow the navigation instead of letting
   // it happen.
-  redirect('/');
+  const locale = await getLocale();
+  redirect({ href: '/', locale });
 }

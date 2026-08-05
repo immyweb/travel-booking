@@ -1,16 +1,19 @@
-import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/navigation';
 import { displayFont } from './fonts';
 import { TileMark } from './TileMark';
 
 const FOOTER_LINKS = [
-  { href: '/about', label: 'About' },
-  { href: '/terms', label: 'Terms & conditions' },
-  { href: '/privacy', label: 'Privacy' },
-  { href: '/accessibility', label: 'Accessibility' },
-  { href: '/cookies', label: 'Cookies' },
-];
+  { href: '/about', labelKey: 'about' },
+  { href: '/terms', labelKey: 'terms' },
+  { href: '/privacy', labelKey: 'privacy' },
+  { href: '/accessibility', labelKey: 'accessibility' },
+  { href: '/cookies', labelKey: 'cookies' },
+] as const;
 
 export function HomeFooter() {
+  const t = useTranslations('HomeFooter');
+
   return (
     <footer className="bg-azulejo text-white">
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-10 sm:flex-row sm:justify-between">
@@ -21,13 +24,12 @@ export function HomeFooter() {
               Travel Booking
             </span>
           </div>
-          <p className="text-sm text-white/70">
-            Boutique stays across Portugal and France — booked direct, no faceless marketplace in
-            between.
-          </p>
+          <p className="text-sm text-white/70">{t('tagline')}</p>
         </div>
-        <nav aria-label="Company" className="flex flex-col gap-2.5">
-          <span className="text-xs font-medium tracking-wide text-white/70 uppercase">Company</span>
+        <nav aria-label={t('companyNavLabel')} className="flex flex-col gap-2.5">
+          <span className="text-xs font-medium tracking-wide text-white/70 uppercase">
+            {t('companyNavLabel')}
+          </span>
           <ul className="flex flex-col gap-1.5">
             {FOOTER_LINKS.map((link) => (
               <li key={link.href}>
@@ -35,7 +37,7 @@ export function HomeFooter() {
                   href={link.href}
                   className="text-sm text-white/80 hover:text-white hover:underline underline-offset-4"
                 >
-                  {link.label}
+                  {t(link.labelKey)}
                 </Link>
               </li>
             ))}
@@ -44,7 +46,7 @@ export function HomeFooter() {
       </div>
       <div className="border-t border-white/10">
         <div className="mx-auto max-w-6xl px-6 py-4 text-xs text-white/70">
-          © {new Date().getFullYear()} Travel Booking
+          {t('copyright', { year: new Date().getFullYear() })}
         </div>
       </div>
     </footer>
