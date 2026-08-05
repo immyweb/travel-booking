@@ -16,10 +16,13 @@ const handleI18nRouting = createMiddleware(routing);
 // still does the real session validation, matching Next's own guidance to
 // never rely on Proxy alone for auth.
 //
-// Locale-aware: the path is matched with an optional /fr prefix (ADR-0008's
-// as-needed prefixing means English has none), and the sign-in redirect
-// preserves whichever prefix — if any — the incoming request had.
-const BOOK_PATH_PATTERN = /^\/(fr)?\/?listings\/[^/]+\/book$/;
+// Locale-aware: the path is matched with an optional non-default-locale
+// prefix (ADR-0008's as-needed prefixing means the default locale, en, has
+// none), and the sign-in redirect preserves whichever prefix — if any — the
+// incoming request had. Built from routing.locales rather than a hardcoded
+// 'fr', so a future locale addition doesn't need this regex updated too.
+const NON_DEFAULT_LOCALES = routing.locales.filter((locale) => locale !== routing.defaultLocale);
+const BOOK_PATH_PATTERN = new RegExp(`^/(${NON_DEFAULT_LOCALES.join('|')})?/?listings/[^/]+/book$`);
 
 export default function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;

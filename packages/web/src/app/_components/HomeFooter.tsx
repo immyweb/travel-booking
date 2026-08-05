@@ -13,6 +13,7 @@ const FOOTER_LINKS = [
 
 export function HomeFooter() {
   const t = useTranslations('HomeFooter');
+  const tCommon = useTranslations('Common');
 
   return (
     <footer className="bg-azulejo text-white">
@@ -21,7 +22,7 @@ export function HomeFooter() {
           <div className="flex items-center gap-2.5">
             <TileMark className="size-6 text-gold" />
             <span className={`${displayFont.className} text-lg font-semibold tracking-tight`}>
-              Travel Booking
+              {tCommon('appName')}
             </span>
           </div>
           <p className="text-sm text-white/70">{t('tagline')}</p>
