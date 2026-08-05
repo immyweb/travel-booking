@@ -3,9 +3,14 @@ import { screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { act } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderWithIntl as render } from '@/test-support/renderWithIntl';
+import { messages, renderWithIntl as render } from '@/test-support/renderWithIntl';
 import { server } from '@/mocks/server';
 import HomePage from './page';
+
+const homePage = messages.HomePage;
+const heroSearchForm = messages.HeroSearchForm;
+const dealsSection = messages.DealsSection;
+const destinationsSection = messages.DestinationsSection;
 
 // Partial mock, not a full replacement: '@/i18n/navigation''s createNavigation
 // call needs the rest of the real module (redirect, etc.) at import time.
@@ -59,24 +64,24 @@ describe('HomePage', () => {
     const ui = await HomePage();
     render(ui);
 
-    expect(
-      screen.getByRole('heading', { name: /Rooftops in Lisbon/i, level: 1 }),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText('Where to?')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: homePage.heroTitle, level: 1 })).toBeInTheDocument();
+    expect(screen.getByLabelText(heroSearchForm.whereTo)).toBeInTheDocument();
   });
 
   it('links each destination tile to its pre-generated /[city]/stays page', async () => {
     const ui = await HomePage();
     render(ui);
 
-    expect(screen.getByRole('link', { name: /Lisbon.*Browse stays/s })).toHaveAttribute(
-      'href',
-      '/lisbon/stays',
-    );
-    expect(screen.getByRole('link', { name: /Paris.*Browse stays/s })).toHaveAttribute(
-      'href',
-      '/paris/stays',
-    );
+    expect(
+      screen.getByRole('link', {
+        name: new RegExp(`Lisbon.*${destinationsSection.browseStays}`, 's'),
+      }),
+    ).toHaveAttribute('href', '/lisbon/stays');
+    expect(
+      screen.getByRole('link', {
+        name: new RegExp(`Paris.*${destinationsSection.browseStays}`, 's'),
+      }),
+    ).toHaveAttribute('href', '/paris/stays');
   });
 
   it('renders a deal card per destination from real search results', async () => {
@@ -88,7 +93,7 @@ describe('HomePage', () => {
       render(ui);
     });
 
-    expect(screen.getByRole('heading', { name: 'Deals on offer' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: dealsSection.heading })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Sunny Alfama studio/ })).toHaveAttribute(
       'href',
       '/listings/listing-lisbon',

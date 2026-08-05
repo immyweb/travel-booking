@@ -3,8 +3,11 @@ import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FIXTURE_LISTING } from '@/mocks/fixtures';
 import { server } from '@/mocks/server';
-import { renderWithIntl as render } from '@/test-support/renderWithIntl';
+import { messages, renderWithIntl as render, t } from '@/test-support/renderWithIntl';
 import ListingDetailPage, { generateMetadata } from './page';
+
+const listingDetailPage = messages.ListingDetailPage;
+const amenities = messages.Amenities;
 
 const API_URL = 'http://localhost:4000';
 
@@ -52,7 +55,7 @@ describe('ListingDetailPage', () => {
     expect(screen.getByRole('heading', { name: FIXTURE_LISTING.title })).toBeInTheDocument();
     expect(screen.getByText('Lisbon, Portugal')).toBeInTheDocument();
     expect(screen.getByText(formatPrice(82, 'EUR'), { exact: false })).toBeInTheDocument();
-    expect(screen.getByText('Sleeps up to 4 guests')).toBeInTheDocument();
+    expect(screen.getByText(t('ListingDetailPage.sleepsUpTo', { count: 4 }))).toBeInTheDocument();
   });
 
   it('renders the full amenity list using the shared amenity label formatting', async () => {
@@ -62,8 +65,8 @@ describe('ListingDetailPage', () => {
     });
     render(ui);
 
-    expect(screen.getByText('Wifi')).toBeInTheDocument();
-    expect(screen.getByText('Parking')).toBeInTheDocument();
+    expect(screen.getByText(amenities.wifi)).toBeInTheDocument();
+    expect(screen.getByText(amenities.parking)).toBeInTheDocument();
   });
 
   it('renders one carousel image per photo, each with distinguishing alt text', async () => {
@@ -103,8 +106,8 @@ describe('ListingDetailPage', () => {
     });
     render(ui);
 
-    expect(screen.queryByText('Not available for these dates')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Book now' })).toBeInTheDocument();
+    expect(screen.queryByText(listingDetailPage.notAvailable)).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: listingDetailPage.bookNow })).toBeInTheDocument();
   });
 
   it('shows the dates, nights and total price, and an enabled Book now, when available for the requested dates', async () => {
@@ -130,9 +133,13 @@ describe('ListingDetailPage', () => {
     render(ui);
 
     expect(screen.getByText(formatDate('2026-08-05'), { exact: false })).toBeInTheDocument();
-    expect(screen.getByText('5 nights', { exact: false })).toBeInTheDocument();
-    expect(screen.getByText(`${formatPrice(410, 'EUR')} total`)).toBeInTheDocument();
-    const bookLink = screen.getByRole('link', { name: 'Book now' });
+    expect(
+      screen.getByText(t('Common.nights', { count: 5 }), { exact: false }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(t('Common.total', { total: formatPrice(410, 'EUR') })),
+    ).toBeInTheDocument();
+    const bookLink = screen.getByRole('link', { name: listingDetailPage.bookNow });
     expect(bookLink).toHaveAttribute(
       'href',
       '/listings/listing-1/book?checkIn=2026-08-05&checkOut=2026-08-10',
@@ -161,9 +168,9 @@ describe('ListingDetailPage', () => {
     });
     render(ui);
 
-    expect(screen.getByText('Not available for these dates')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Book now' })).toBeDisabled();
-    expect(screen.queryByRole('link', { name: 'Book now' })).not.toBeInTheDocument();
+    expect(screen.getByText(listingDetailPage.notAvailable)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: listingDetailPage.bookNow })).toBeDisabled();
+    expect(screen.queryByRole('link', { name: listingDetailPage.bookNow })).not.toBeInTheDocument();
   });
 });
 

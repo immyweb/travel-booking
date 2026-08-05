@@ -3,8 +3,11 @@ import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FIXTURE_BOOKING, FIXTURE_LISTING } from '@/mocks/fixtures';
 import { server } from '@/mocks/server';
-import { renderWithIntl as render } from '@/test-support/renderWithIntl';
+import { messages, renderWithIntl as render, t } from '@/test-support/renderWithIntl';
 import BookingConfirmationPage, { generateMetadata } from './page';
+
+const bookingConfirmationPage = messages.BookingConfirmationPage;
+const pendingBookingWatcher = messages.PendingBookingWatcher;
 
 const API_URL = 'http://localhost:4000';
 
@@ -56,8 +59,12 @@ describe('BookingConfirmationPage', () => {
     expect(screen.getByAltText(FIXTURE_LISTING.title)).toBeInTheDocument();
     expect(screen.getByText(formatDate('2026-08-05'), { exact: false })).toBeInTheDocument();
     expect(screen.getByText(formatDate('2026-08-10'), { exact: false })).toBeInTheDocument();
-    expect(screen.getByText('5 nights', { exact: false })).toBeInTheDocument();
-    expect(screen.getByText(formatPrice(410, 'EUR'), { exact: false })).toBeInTheDocument();
+    expect(
+      screen.getByText(t('Common.nights', { count: 5 }), { exact: false }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(t('Common.total', { total: formatPrice(410, 'EUR') }), { exact: false }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Jane Doe')).toBeInTheDocument();
     expect(screen.getByText('jane@example.com')).toBeInTheDocument();
   });
@@ -132,12 +139,16 @@ describe('BookingConfirmationPage', () => {
     });
     render(ui);
 
-    expect(screen.getByRole('heading', { name: /confirming your payment/i })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Booking confirmed' })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: bookingConfirmationPage.confirmingPayment }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: bookingConfirmationPage.bookingConfirmed }),
+    ).not.toBeInTheDocument();
     // PendingBookingWatcher's own suite covers the polling/timeout behavior
     // in detail — this just proves it's actually mounted for a pending
     // booking, via the copy it renders.
-    expect(screen.getByText(/this can take a few moments/i, { exact: false })).toBeInTheDocument();
+    expect(screen.getByText(pendingBookingWatcher.checking, { exact: false })).toBeInTheDocument();
   });
 });
 

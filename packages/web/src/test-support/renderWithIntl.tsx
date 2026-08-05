@@ -1,5 +1,5 @@
 import { render, type RenderOptions } from '@testing-library/react';
-import { NextIntlClientProvider } from 'next-intl';
+import { createTranslator, NextIntlClientProvider } from 'next-intl';
 import type { ReactElement } from 'react';
 import messages from '../../messages/en.json';
 
@@ -20,3 +20,9 @@ export function renderWithIntl(ui: ReactElement, options?: RenderOptions) {
 }
 
 export { messages };
+
+// Resolves ICU messages (plurals, interpolation) against the real en.json,
+// for test assertions that need a rendered value rather than the raw
+// message tree renderWithIntl's `messages` export gives you — e.g.
+// t('MyBookingsPage.staysCount', { count: 1 }).
+export const t = createTranslator({ locale: 'en', messages });

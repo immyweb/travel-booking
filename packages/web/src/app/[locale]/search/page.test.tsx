@@ -8,8 +8,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { slugify } from '@/lib/utils';
 import { FIXTURE_CITIES, FIXTURE_SEARCH_RESPONSE } from '@/mocks/fixtures';
 import { server } from '@/mocks/server';
-import { renderWithIntl as render } from '@/test-support/renderWithIntl';
+import { messages, renderWithIntl as render, t } from '@/test-support/renderWithIntl';
 import SearchPage, { generateMetadata } from './page';
+
+const common = messages.Common;
+const searchEmptyState = messages.SearchEmptyState;
+const cityPicker = messages.CityPicker;
+const amenitiesFilter = messages.AmenitiesFilter;
+const amenities = messages.Amenities;
+// CityPicker's combobox accessible name is its label concatenated with the
+// currently selected city ("Where to? Paris, France"), so assertions can
+// only match a prefix of it — hence a regex built from the real message
+// rather than an exact-string match.
+const whereToNameRegex = new RegExp(cityPicker.whereTo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 
 const API_URL = 'http://localhost:4000';
 
@@ -109,7 +120,7 @@ describe('SearchPage', () => {
       render(ui);
     });
 
-    expect(screen.getByText('No listings match your search')).toBeInTheDocument();
+    expect(screen.getByText(searchEmptyState.title)).toBeInTheDocument();
   });
 
   it('reflects the city from the URL query params in the picker', async () => {
@@ -118,7 +129,9 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    expect(screen.getByRole('combobox', { name: /Where to\?/ })).toHaveTextContent('Paris, France');
+    expect(screen.getByRole('combobox', { name: whereToNameRegex })).toHaveTextContent(
+      'Paris, France',
+    );
   });
 
   it('updates the URL when a different city is picked', async () => {
@@ -128,7 +141,7 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    await user.click(screen.getByRole('combobox', { name: /Where to\?/ }));
+    await user.click(screen.getByRole('combobox', { name: whereToNameRegex }));
     await user.click(await screen.findByRole('option', { name: 'Lisbon, Portugal' }));
 
     expect(pushMock).toHaveBeenCalledWith('/search?city=Lisbon&country=Portugal');
@@ -146,7 +159,7 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    await user.click(screen.getByRole('combobox', { name: /Where to\?/ }));
+    await user.click(screen.getByRole('combobox', { name: whereToNameRegex }));
     await user.click(await screen.findByRole('option', { name: 'Lisbon, Portugal' }));
 
     expect(pushMock).toHaveBeenCalledWith(
@@ -165,8 +178,8 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    expect(screen.getByLabelText('Check-in')).toHaveValue('2026-08-05');
-    expect(screen.getByLabelText('Check-out')).toHaveValue('2026-08-10');
+    expect(screen.getByLabelText(common.checkIn)).toHaveValue('2026-08-05');
+    expect(screen.getByLabelText(common.checkOut)).toHaveValue('2026-08-10');
   });
 
   it('updates the URL with the new check-in date, preserving the selected city', async () => {
@@ -175,7 +188,7 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    fireEvent.change(screen.getByLabelText('Check-in'), { target: { value: '2026-08-05' } });
+    fireEvent.change(screen.getByLabelText(common.checkIn), { target: { value: '2026-08-05' } });
 
     expect(pushMock).toHaveBeenCalledWith('/search?city=Paris&country=France&checkIn=2026-08-05');
   });
@@ -190,7 +203,7 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    fireEvent.change(screen.getByLabelText('Check-out'), { target: { value: '2026-08-10' } });
+    fireEvent.change(screen.getByLabelText(common.checkOut), { target: { value: '2026-08-10' } });
 
     expect(pushMock).toHaveBeenCalledWith(
       '/search?city=Paris&country=France&checkIn=2026-08-05&checkOut=2026-08-10',
@@ -203,7 +216,7 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    expect(screen.getByLabelText('Guests')).toHaveValue(4);
+    expect(screen.getByLabelText(common.guests)).toHaveValue(4);
   });
 
   it('updates the URL with the new guest count, preserving the selected city', async () => {
@@ -212,7 +225,7 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    fireEvent.change(screen.getByLabelText('Guests'), { target: { value: '3' } });
+    fireEvent.change(screen.getByLabelText(common.guests), { target: { value: '3' } });
 
     expect(pushMock).toHaveBeenCalledWith('/search?city=Paris&country=France&guests=3');
   });
@@ -224,7 +237,7 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    await user.click(screen.getByRole('combobox', { name: /Where to\?/ }));
+    await user.click(screen.getByRole('combobox', { name: whereToNameRegex }));
     await user.click(await screen.findByRole('option', { name: 'Lisbon, Portugal' }));
 
     expect(pushMock).toHaveBeenCalledWith('/search?city=Lisbon&country=Portugal&guests=4');
@@ -236,7 +249,7 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    fireEvent.change(screen.getByLabelText('Check-in'), { target: { value: '2026-08-05' } });
+    fireEvent.change(screen.getByLabelText(common.checkIn), { target: { value: '2026-08-05' } });
 
     expect(pushMock).toHaveBeenCalledWith(
       '/search?city=Paris&country=France&checkIn=2026-08-05&guests=4',
@@ -254,11 +267,13 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    await user.click(screen.getByRole('button', { name: 'Amenities (2)' }));
+    await user.click(
+      screen.getByRole('button', { name: t('AmenitiesFilter.amenitiesCount', { count: 2 }) }),
+    );
 
-    expect(screen.getByRole('menuitemcheckbox', { name: 'Wifi' })).toBeChecked();
-    expect(screen.getByRole('menuitemcheckbox', { name: 'Parking' })).toBeChecked();
-    expect(screen.getByRole('menuitemcheckbox', { name: 'Pool' })).not.toBeChecked();
+    expect(screen.getByRole('menuitemcheckbox', { name: amenities.wifi })).toBeChecked();
+    expect(screen.getByRole('menuitemcheckbox', { name: amenities.parking })).toBeChecked();
+    expect(screen.getByRole('menuitemcheckbox', { name: amenities.pool })).not.toBeChecked();
   });
 
   it('updates the URL with the new amenity, preserving the selected city', async () => {
@@ -268,8 +283,8 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    await user.click(screen.getByRole('button', { name: 'Amenities' }));
-    await user.click(screen.getByRole('menuitemcheckbox', { name: 'Wifi' }));
+    await user.click(screen.getByRole('button', { name: amenitiesFilter.amenities }));
+    await user.click(screen.getByRole('menuitemcheckbox', { name: amenities.wifi }));
 
     expect(pushMock).toHaveBeenCalledWith('/search?city=Paris&country=France&amenities=wifi');
   });
@@ -285,8 +300,10 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    await user.click(screen.getByRole('button', { name: 'Amenities (2)' }));
-    await user.click(screen.getByRole('menuitemcheckbox', { name: 'Wifi' }));
+    await user.click(
+      screen.getByRole('button', { name: t('AmenitiesFilter.amenitiesCount', { count: 2 }) }),
+    );
+    await user.click(screen.getByRole('menuitemcheckbox', { name: amenities.wifi }));
 
     expect(pushMock).toHaveBeenCalledWith('/search?city=Paris&country=France&amenities=parking');
   });
@@ -298,7 +315,7 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    await user.click(screen.getByRole('combobox', { name: /Where to\?/ }));
+    await user.click(screen.getByRole('combobox', { name: whereToNameRegex }));
     await user.click(await screen.findByRole('option', { name: 'Lisbon, Portugal' }));
 
     expect(pushMock).toHaveBeenCalledWith('/search?city=Lisbon&country=Portugal&amenities=wifi');
@@ -310,7 +327,7 @@ describe('SearchPage', () => {
     });
     render(ui);
 
-    fireEvent.change(screen.getByLabelText('Check-in'), { target: { value: '2026-08-05' } });
+    fireEvent.change(screen.getByLabelText(common.checkIn), { target: { value: '2026-08-05' } });
 
     expect(pushMock).toHaveBeenCalledWith(
       '/search?city=Paris&country=France&checkIn=2026-08-05&amenities=wifi',

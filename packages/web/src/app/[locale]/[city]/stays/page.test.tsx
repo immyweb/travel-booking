@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FIXTURE_CITIES, FIXTURE_SEARCH_RESPONSE } from '@/mocks/fixtures';
 import { server } from '@/mocks/server';
-import { renderWithIntl as render } from '@/test-support/renderWithIntl';
+import { renderWithIntl as render, t } from '@/test-support/renderWithIntl';
 import CityStaysPage, { generateMetadata, generateStaticParams } from './page';
 
 const API_URL = 'http://localhost:4000';
@@ -55,7 +55,9 @@ describe('CityStaysPage', () => {
     const ui = await CityStaysPage({ params: Promise.resolve({ locale: 'en', city: 'lisbon' }) });
     render(ui);
 
-    expect(screen.getByText('Lisbon, Portugal', { exact: false })).toBeInTheDocument();
+    expect(
+      screen.getByText(t('CityStaysPage.staysInCity', { city: 'Lisbon', country: 'Portugal' })),
+    ).toBeInTheDocument();
     for (const listing of FIXTURE_SEARCH_RESPONSE.results) {
       expect(screen.getByRole('img', { name: listing.title })).toBeInTheDocument();
     }
@@ -65,10 +67,11 @@ describe('CityStaysPage', () => {
     const ui = await CityStaysPage({ params: Promise.resolve({ locale: 'en', city: 'lisbon' }) });
     render(ui);
 
-    expect(screen.getByRole('link', { name: 'Search stays in Lisbon' })).toHaveAttribute(
-      'href',
-      '/search?city=Lisbon&country=Portugal',
-    );
+    expect(
+      screen.getByRole('link', {
+        name: t('CityStaysPage.searchStaysInCity', { city: 'Lisbon' }),
+      }),
+    ).toHaveAttribute('href', '/search?city=Lisbon&country=Portugal');
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: /pages/i })).not.toBeInTheDocument();
   });
@@ -96,15 +99,21 @@ describe('CityStaysPage', () => {
     const ui = await CityStaysPage({ params: Promise.resolve({ locale: 'en', city: 'berlin' }) });
     render(ui);
 
-    expect(screen.getByText('Berlin, Germany', { exact: false })).toBeInTheDocument();
+    expect(
+      screen.getByText(t('CityStaysPage.staysInCity', { city: 'Berlin', country: 'Germany' })),
+    ).toBeInTheDocument();
   });
 });
 
 describe('generateMetadata', () => {
   it('sets a title and description naming the city for a matched slug', async () => {
-    const metadata = await generateMetadata({ params: Promise.resolve({ locale: 'en', city: 'lisbon' }) });
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ locale: 'en', city: 'lisbon' }),
+    });
 
-    expect(metadata.title).toBe('Stays in Lisbon, Portugal | Travel Booking');
+    expect(metadata.title).toBe(
+      t('CityStaysPage.metaTitle', { city: 'Lisbon', country: 'Portugal' }),
+    );
     expect(metadata.description).toEqual(expect.stringContaining('Lisbon'));
   });
 

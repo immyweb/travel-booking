@@ -4,8 +4,11 @@ import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FIXTURE_BOOKING } from '@/mocks/fixtures';
 import { server } from '@/mocks/server';
-import { renderWithIntl as render } from '@/test-support/renderWithIntl';
+import { messages, renderWithIntl as render, t } from '@/test-support/renderWithIntl';
 import MyBookingsPage from './page';
+
+const myBookingsPage = messages.MyBookingsPage;
+const myBookingsEmptyState = messages.MyBookingsEmptyState;
 
 const API_URL = 'http://localhost:4000';
 
@@ -68,15 +71,17 @@ describe('MyBookingsPage', () => {
     render(ui);
 
     expect(redirectMock).not.toHaveBeenCalled();
-    expect(screen.getByRole('heading', { name: 'My Bookings' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: myBookingsPage.heading })).toBeInTheDocument();
   });
 
   it('shows an empty state when the customer has no bookings', async () => {
     const ui = await MyBookingsPage();
     render(ui);
 
-    expect(screen.getByText('No bookings yet')).toBeInTheDocument();
-    expect(screen.queryByRole('list', { name: 'Your bookings' })).not.toBeInTheDocument();
+    expect(screen.getByText(myBookingsEmptyState.title)).toBeInTheDocument();
+    expect(
+      screen.queryByRole('list', { name: myBookingsPage.bookingsListLabel }),
+    ).not.toBeInTheDocument();
   });
 
   it('lists each booking, linking to its confirmation page', async () => {
@@ -85,14 +90,14 @@ describe('MyBookingsPage', () => {
     const ui = await MyBookingsPage();
     render(ui);
 
-    expect(screen.queryByText('No bookings yet')).not.toBeInTheDocument();
+    expect(screen.queryByText(myBookingsEmptyState.title)).not.toBeInTheDocument();
     const link = screen.getByRole('link', { name: /Jane Doe/ });
     expect(link).toHaveAttribute('href', `/bookings/${FIXTURE_BOOKING.id}`);
     expect(link).toHaveTextContent(
       `${formatDate('2026-08-05')} – ${formatDate('2026-08-10')} · 5 nights`,
     );
     expect(link).toHaveTextContent(`${formatPrice(410, 'EUR')} total`);
-    expect(screen.getByText('1 stay')).toBeInTheDocument();
+    expect(screen.getByText(t('MyBookingsPage.staysCount', { count: 1 }))).toBeInTheDocument();
   });
 
   it('lists multiple bookings', async () => {
@@ -107,6 +112,6 @@ describe('MyBookingsPage', () => {
     render(ui);
 
     expect(screen.getAllByRole('link', { name: /Doe|Smith/ })).toHaveLength(2);
-    expect(screen.getByText('2 stays')).toBeInTheDocument();
+    expect(screen.getByText(t('MyBookingsPage.staysCount', { count: 2 }))).toBeInTheDocument();
   });
 });

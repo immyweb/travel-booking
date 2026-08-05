@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FIXTURE_LISTING } from '@/mocks/fixtures';
 import { server } from '@/mocks/server';
-import { renderWithIntl as render } from '@/test-support/renderWithIntl';
+import { renderWithIntl as render, t } from '@/test-support/renderWithIntl';
 import BookListingPage, { generateMetadata } from './page';
 
 // Mirrors the locale-aware formatting the page now applies (#38) — assertions
@@ -129,8 +129,11 @@ describe('BookListingPage', () => {
 
     expect(screen.getByRole('heading', { name: FIXTURE_LISTING.title })).toBeInTheDocument();
     expect(screen.getByText('Lisbon, Portugal')).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(formatPrice(82, 'EUR')))).toBeInTheDocument();
-    expect(screen.getByText(/Sleeps up to 4 guests/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        t('BookListingPage.perNightSleeps', { price: formatPrice(82, 'EUR'), count: 4 }),
+      ),
+    ).toBeInTheDocument();
   });
 
   it('calls notFound when the listing does not exist', async () => {
@@ -187,7 +190,7 @@ describe('BookListingPage', () => {
     render(ui);
 
     expect(screen.getByTestId('stay-summary')).toHaveTextContent(
-      `${formatDate('2026-08-05')} – ${formatDate('2026-08-10')} · 5 nights · ${formatPrice(410, 'EUR')} total`,
+      `${formatDate('2026-08-05')} – ${formatDate('2026-08-10')} · ${t('Common.nights', { count: 5 })} · ${t('Common.total', { total: formatPrice(410, 'EUR') })}`,
     );
 
     const props = JSON.parse(screen.getByTestId('booking-form').textContent!);
@@ -257,7 +260,7 @@ describe('generateMetadata', () => {
       searchParams: Promise.resolve({}),
     });
 
-    expect(metadata.title).toBe(`Book ${FIXTURE_LISTING.title}`);
+    expect(metadata.title).toBe(t('BookListingPage.metaTitle', { title: FIXTURE_LISTING.title }));
   });
 
   it('calls notFound when the listing does not exist', async () => {
