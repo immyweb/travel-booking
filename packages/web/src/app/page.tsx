@@ -2,6 +2,7 @@ import type { CityCentroid } from '@travel-booking/core';
 import { Suspense } from 'react';
 import { DealsSection, type Deal } from '@/app/_components/DealsSection';
 import { DealsSkeleton } from '@/app/_components/DealsSkeleton';
+import { DestinationsSection } from '@/app/_components/DestinationsSection';
 import { displayFont } from '@/app/_components/fonts';
 import { HeroSearchForm } from '@/app/_components/HeroSearchForm';
 import { TileDivider } from '@/app/_components/TileDivider';
@@ -71,6 +72,8 @@ export default async function HomePage() {
         </div>
         <TileDivider />
       </section>
+
+      <DestinationsSection cities={cities} />
 
       <Suspense fallback={<DealsSkeleton />}>
         <DealsSection dealsPromise={dealsPromise} />

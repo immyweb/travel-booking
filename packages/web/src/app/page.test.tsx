@@ -61,6 +61,20 @@ describe('HomePage', () => {
     expect(screen.getByLabelText('Where to?')).toBeInTheDocument();
   });
 
+  it('links each destination tile to its pre-generated /[city]/stays page', async () => {
+    const ui = await HomePage();
+    render(ui);
+
+    expect(screen.getByRole('link', { name: /Lisbon.*Browse stays/s })).toHaveAttribute(
+      'href',
+      '/lisbon/stays',
+    );
+    expect(screen.getByRole('link', { name: /Paris.*Browse stays/s })).toHaveAttribute(
+      'href',
+      '/paris/stays',
+    );
+  });
+
   it('renders a deal card per destination from real search results', async () => {
     const ui = await HomePage();
     // The deals grid resolves behind a Suspense boundary now, so the render
