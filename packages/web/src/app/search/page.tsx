@@ -1,4 +1,4 @@
-import { AmenitySchema, type Amenity } from '@travel-booking/core';
+import { AmenitySchema, type Amenity, type CityCentroid } from '@travel-booking/core';
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { displayFont } from '@/app/_components/fonts';
@@ -35,6 +35,18 @@ function resolvePage(pageParam: string | undefined): number {
   return requestedPage > 0 ? requestedPage : 1;
 }
 
+// Shared by the page component and generateMetadata so both resolve the same
+// city — an unmatched or absent city/country param falls back to the first
+// city the same way in both, mirroring /[city]/stays' own findCity.
+function findSelectedCity(
+  params: { city?: string; country?: string },
+  cities: CityCentroid[],
+): CityCentroid | undefined {
+  return (
+    cities.find((city) => city.city === params.city && city.country === params.country) ?? cities[0]
+  );
+}
+
 // /search's unfiltered, page-1 view of a city renders near-identical content
 // to that city's /[city]/stays page (ADR-0007) — this is true only when
 // checkIn/checkOut/guests/amenities are all absent, since any of those makes
@@ -50,10 +62,7 @@ function isDefaultCityView(params: Awaited<SearchPageProps['searchParams']>): bo
 
 export async function generateMetadata({ searchParams }: SearchPageProps): Promise<Metadata> {
   const [params, cities] = await Promise.all([searchParams, fetchCities()]);
-
-  const selectedCity =
-    cities.find((city) => city.city === params.city && city.country === params.country) ??
-    cities[0];
+  const selectedCity = findSelectedCity(params, cities);
 
   if (!selectedCity || !isDefaultCityView(params)) {
     return {};
@@ -68,10 +77,7 @@ export async function generateMetadata({ searchParams }: SearchPageProps): Promi
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const [params, cities] = await Promise.all([searchParams, fetchCities()]);
-
-  const selectedCity =
-    cities.find((city) => city.city === params.city && city.country === params.country) ??
-    cities[0];
+  const selectedCity = findSelectedCity(params, cities);
 
   if (!selectedCity) {
     return (

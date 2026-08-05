@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { slugify } from '@/lib/utils';
 import { FIXTURE_CITIES, FIXTURE_SEARCH_RESPONSE } from '@/mocks/fixtures';
 import { server } from '@/mocks/server';
 import SearchPage, { generateMetadata } from './page';
@@ -363,7 +364,7 @@ describe('generateMetadata', () => {
   it('emits a canonical link to the default city when no searchParams are present', async () => {
     const metadata = await generateMetadata({ searchParams: Promise.resolve({}) });
 
-    expect(metadata.alternates?.canonical).toBe(`/${FIXTURE_CITIES[0]!.city.toLowerCase()}/stays`);
+    expect(metadata.alternates?.canonical).toBe(`/${slugify(FIXTURE_CITIES[0]!.city)}/stays`);
   });
 
   it('emits the canonical link when page=1 is explicitly present, since that is still the default', async () => {
