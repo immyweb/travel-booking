@@ -48,12 +48,12 @@ export function DestinationsSection({ cities }: DestinationsSectionProps) {
                 <TileMark
                   className={`pointer-events-none absolute -right-6 -bottom-6 size-32 rotate-12 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[20deg] ${style.motif}`}
                 />
-                <span className="relative font-mono text-xs tracking-wide uppercase opacity-70">
+                <span className="relative font-mono text-xs tracking-wide uppercase">
                   {city.country}
                 </span>
                 <span className="relative">
                   <span className="block text-2xl font-semibold sm:text-3xl">{city.city}</span>
-                  <span className="mt-2 inline-flex items-center gap-1 text-sm font-medium opacity-90">
+                  <span className="mt-2 inline-flex items-center gap-1 text-sm font-medium">
                     Browse stays
                     <ArrowUpRight
                       className="size-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
