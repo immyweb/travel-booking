@@ -1,7 +1,8 @@
 import { getTranslations } from 'next-intl/server';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Link } from '@/i18n/navigation';
 import { fetchSession } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { submitSignOut } from './_actions';
 import { displayFont } from './fonts';
 import { LocaleSwitcher } from './LocaleSwitcher';
@@ -53,13 +54,17 @@ export async function HomeHeader() {
               </Link>
             </>
           )}
-          <Button
-            asChild
-            size="lg"
-            className="bg-white text-azulejo hover:bg-white/90 focus-visible:ring-white/50"
+          <Link
+            href="/search"
+            className={cn(
+              buttonVariants({
+                size: 'lg',
+                className: 'bg-white text-azulejo hover:bg-white/90 focus-visible:ring-white/50',
+              }),
+            )}
           >
-            <Link href="/search">{tCommon('searchStays')}</Link>
-          </Button>
+            {tCommon('searchStays')}
+          </Link>
         </div>
       </div>
     </header>

@@ -4,11 +4,11 @@ import { notFound } from 'next/navigation';
 import { displayFont } from '@/app/_components/fonts';
 import { EmptyState } from '@/components/pages/EmptyState';
 import { SearchResults } from '@/components/pages/SearchResults';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { Link } from '@/i18n/navigation';
 import { languageAlternates } from '@/i18n/metadata';
 import { DEFAULT_RADIUS_KM, fetchCities, fetchSearchResults, PAGE_SIZE } from '@/lib/api';
-import { searchHref, slugify } from '@/lib/utils';
+import { cn, searchHref, slugify } from '@/lib/utils';
 
 // This page renders only /search's default, unfiltered page 1 (ADR-0007) —
 // no dates/guests/amenities, and no searchParams read here at all. Time-based
@@ -84,14 +84,17 @@ export default async function CityStaysPage({ params }: CityStaysPageProps) {
               {t('staysInCity', { city: city.city, country: city.country })}
             </h1>
           </div>
-          <Button
-            asChild
-            className="bg-terracotta text-white hover:bg-terracotta/90 focus-visible:ring-terracotta/40"
+          <Link
+            href={searchHref({ city: { city: city.city, country: city.country } })}
+            className={cn(
+              buttonVariants({
+                className:
+                  'bg-terracotta text-white hover:bg-terracotta/90 focus-visible:ring-terracotta/40',
+              }),
+            )}
           >
-            <Link href={searchHref({ city: { city: city.city, country: city.country } })}>
-              {t('searchStaysInCity', { city: city.city })}
-            </Link>
-          </Button>
+            {t('searchStaysInCity', { city: city.city })}
+          </Link>
         </div>
       </div>
 

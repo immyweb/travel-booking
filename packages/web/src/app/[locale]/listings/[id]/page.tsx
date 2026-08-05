@@ -15,11 +15,11 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { displayFont } from '@/app/_components/fonts';
 import { TileMark } from '@/app/_components/TileMark';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Link } from '@/i18n/navigation';
 import { languageAlternates } from '@/i18n/metadata';
 import { fetchListing } from '@/lib/api';
-import { carryDatesAndGuests } from '@/lib/utils';
+import { carryDatesAndGuests, cn } from '@/lib/utils';
 import { ListingGallery } from './_components/ListingGallery';
 
 // Fixed alongside AMENITIES in @travel-booking/core — each entry there needs
@@ -188,13 +188,18 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
                 )}
 
                 {canBook ? (
-                  <Button
-                    asChild
-                    size="lg"
-                    className="h-11 w-full bg-terracotta text-white hover:bg-terracotta/90 focus-visible:ring-terracotta/40"
+                  <Link
+                    href={bookHref}
+                    className={cn(
+                      buttonVariants({
+                        size: 'lg',
+                        className:
+                          'h-11 w-full bg-terracotta text-white hover:bg-terracotta/90 focus-visible:ring-terracotta/40',
+                      }),
+                    )}
                   >
-                    <Link href={bookHref}>{t('bookNow')}</Link>
-                  </Button>
+                    {t('bookNow')}
+                  </Link>
                 ) : (
                   <Button disabled size="lg" className="h-11 w-full">
                     {t('bookNow')}

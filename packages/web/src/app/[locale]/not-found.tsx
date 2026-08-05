@@ -1,8 +1,9 @@
 import { useTranslations } from 'next-intl';
 import { displayFont } from '@/app/_components/fonts';
 import { TileMark } from '@/app/_components/TileMark';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { Link } from '@/i18n/navigation';
+import { cn } from '@/lib/utils';
 
 export default function NotFound() {
   const t = useTranslations('NotFoundPage');
@@ -15,13 +16,18 @@ export default function NotFound() {
           {t('heading')}
         </h1>
         <p className="max-w-sm text-sm text-muted-foreground">{t('subheading')}</p>
-        <Button
-          asChild
-          size="lg"
-          className="mt-3 bg-terracotta text-white hover:bg-terracotta/90 focus-visible:ring-terracotta/40"
+        <Link
+          href="/search"
+          className={cn(
+            buttonVariants({
+              size: 'lg',
+              className:
+                'mt-3 bg-terracotta text-white hover:bg-terracotta/90 focus-visible:ring-terracotta/40',
+            }),
+          )}
         >
-          <Link href="/search">{t('backToSearch')}</Link>
-        </Button>
+          {t('backToSearch')}
+        </Link>
       </div>
     </main>
   );

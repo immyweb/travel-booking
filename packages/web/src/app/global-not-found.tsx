@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { TileMark } from '@/app/_components/TileMark';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { displayFont } from './_components/fonts';
 import './globals.css';
 
@@ -32,13 +33,18 @@ export default function GlobalNotFound() {
             <p className="max-w-sm text-sm text-muted-foreground">
               It may have been removed, or the link might be broken.
             </p>
-            <Button
-              asChild
-              size="lg"
-              className="mt-3 bg-terracotta text-white hover:bg-terracotta/90 focus-visible:ring-terracotta/40"
+            <Link
+              href="/search"
+              className={cn(
+                buttonVariants({
+                  size: 'lg',
+                  className:
+                    'mt-3 bg-terracotta text-white hover:bg-terracotta/90 focus-visible:ring-terracotta/40',
+                }),
+              )}
             >
-              <Link href="/search">Back to search</Link>
-            </Button>
+              Back to search
+            </Link>
           </div>
         </main>
       </body>
