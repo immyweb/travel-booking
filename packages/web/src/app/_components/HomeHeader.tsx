@@ -1,19 +1,24 @@
 import { getTranslations } from 'next-intl/server';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Suspense } from 'react';
+import { buttonVariants } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from '@/i18n/navigation';
 import { fetchSession } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { submitSignOut } from './_actions';
+import { AuthStatus } from './AuthStatus';
 import { displayFont } from './fonts';
 import { LocaleSwitcher } from './LocaleSwitcher';
 import { TileMark } from './TileMark';
 
+// Not awaited here: fetchSession is a live, uncached fetch to the auth
+// service on every request (see lib/api.ts), and this header is mounted in
+// the root layout above every page — awaiting it here would block the whole
+// page (including fully static ones like About/Terms) on that round trip.
+// Started immediately, but resolving it is deferred to AuthStatus's own
+// Suspense boundary below, same pattern as Search's resultsPromise.
 export async function HomeHeader() {
-  const [session, t, tCommon] = await Promise.all([
-    fetchSession(),
-    getTranslations('HomeHeader'),
-    getTranslations('Common'),
-  ]);
+  const sessionPromise = fetchSession();
+  const tCommon = await getTranslations('Common');
 
   return (
     <header className="sticky top-0 z-20 bg-azulejo text-white">
@@ -26,34 +31,9 @@ export async function HomeHeader() {
         </Link>
         <div className="flex items-center gap-4">
           <LocaleSwitcher />
-          {session ? (
-            <>
-              <span className="hidden text-sm text-white/80 sm:inline">
-                {t('welcomeBack')}{' '}
-                <Link href="/my-bookings" className="font-medium text-white hover:underline">
-                  {session.name}
-                </Link>
-              </span>
-              <form action={submitSignOut}>
-                <Button
-                  type="submit"
-                  variant="ghost"
-                  className="text-white hover:bg-white/10 hover:text-white"
-                >
-                  {tCommon('signOut')}
-                </Button>
-              </form>
-            </>
-          ) : (
-            <>
-              <Link href="/sign-in" className="text-sm font-medium hover:underline">
-                {tCommon('signIn')}
-              </Link>
-              <Link href="/sign-up" className="text-sm font-medium hover:underline">
-                {tCommon('signUp')}
-              </Link>
-            </>
-          )}
+          <Suspense fallback={<AuthStatusSkeleton />}>
+            <AuthStatus sessionPromise={sessionPromise} />
+          </Suspense>
           <Link
             href="/search"
             className={cn(
@@ -68,5 +48,17 @@ export async function HomeHeader() {
         </div>
       </div>
     </header>
+  );
+}
+
+// Sized to roughly match the sign-in/sign-up links AuthStatus renders when
+// signed out, so the real content streaming in doesn't visibly reflow the
+// header.
+function AuthStatusSkeleton() {
+  return (
+    <div className="flex items-center gap-4">
+      <Skeleton className="h-4 w-12 bg-white/20" />
+      <Skeleton className="h-4 w-14 bg-white/20" />
+    </div>
   );
 }

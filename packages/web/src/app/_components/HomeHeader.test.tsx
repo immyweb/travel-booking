@@ -1,5 +1,6 @@
 import { screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
+import { act } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { server } from '@/mocks/server';
 import { renderWithIntl as render } from '@/test-support/renderWithIntl';
@@ -26,7 +27,13 @@ describe('HomeHeader', () => {
   it('shows sign-in/sign-up links when signed out', async () => {
     server.use(http.get(`${API_URL}/api/auth/get-session`, () => HttpResponse.json(null)));
 
-    render(await HomeHeader());
+    const ui = await HomeHeader();
+    // The signed-in/out state now resolves behind AuthStatus's own Suspense
+    // boundary (so the header shell isn't blocked on the session fetch) —
+    // mirrors HomePage's own dealsPromise + Suspense test.
+    await act(async () => {
+      render(ui);
+    });
 
     expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/sign-in');
     expect(screen.getByRole('link', { name: 'Sign up' })).toHaveAttribute('href', '/sign-up');
@@ -43,7 +50,10 @@ describe('HomeHeader', () => {
       ),
     );
 
-    render(await HomeHeader());
+    const ui = await HomeHeader();
+    await act(async () => {
+      render(ui);
+    });
 
     expect(screen.getByText(/welcome back,/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Jane Doe' })).toHaveAttribute('href', '/my-bookings');
