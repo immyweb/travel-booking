@@ -32,10 +32,25 @@ const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 // explicitly rather than relying on a browser to supply it.
 const SITE_URL = process.env.SITE_URL ?? 'http://localhost:3000';
 
-export async function fetchSearchResults(query: SearchQuery): Promise<SearchResponse> {
-  const response = await fetch(`${API_URL}/search?${toSearchParams(query).toString()}`, {
-    cache: 'no-store',
-  });
+// Shared by /search and /[city]/stays, which both call fetchSearchResults
+// with these as their default, no-location-control view — a single source
+// keeps the two from drifting to different defaults.
+export const DEFAULT_RADIUS_KM = 25;
+export const PAGE_SIZE = 12;
+
+// /search calls this uncached (live results per request); /[city]/stays
+// passes its own `revalidate` so this same fetch instead participates in
+// that route's ISR — a `cache: 'no-store'` fetch anywhere in a route's render
+// tree forces the whole route dynamic, which would defeat the pre-rendering
+// /[city]/stays exists for (ADR-0007).
+export async function fetchSearchResults(
+  query: SearchQuery,
+  options?: { revalidate: number },
+): Promise<SearchResponse> {
+  const response = await fetch(
+    `${API_URL}/search?${toSearchParams(query).toString()}`,
+    options ? { next: { revalidate: options.revalidate } } : { cache: 'no-store' },
+  );
   if (!response.ok) {
     await failed('GET /search', response);
   }

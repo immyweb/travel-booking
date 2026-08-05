@@ -3,8 +3,8 @@
 import type { Amenity, SearchResponse } from '@travel-booking/core';
 import Link from 'next/link';
 import { use } from 'react';
-import { EmptyState } from './EmptyState';
-import { SearchResults } from './SearchResults';
+import { EmptyState } from '@/components/pages/EmptyState';
+import { SearchResults } from '@/components/pages/SearchResults';
 
 type SearchResultsSectionProps = {
   resultsPromise: Promise<SearchResponse>;

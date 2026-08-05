@@ -1,7 +1,7 @@
 import { AmenitySchema, type Amenity } from '@travel-booking/core';
 import { Suspense } from 'react';
 import { displayFont } from '@/app/_components/fonts';
-import { fetchCities, fetchSearchResults } from '@/lib/api';
+import { DEFAULT_RADIUS_KM, fetchCities, fetchSearchResults, PAGE_SIZE } from '@/lib/api';
 import { AmenitiesFilter } from './_components/AmenitiesFilter';
 import { CityPicker } from './_components/CityPicker';
 import { DateRangeFilter } from './_components/DateRangeFilter';
@@ -12,11 +12,6 @@ import { SearchResultsSection } from './_components/SearchResultsSection';
 function isAmenity(value: string): value is Amenity {
   return AmenitySchema.safeParse(value).success;
 }
-
-// No radius-adjustment UI for v1 — a fixed default keeps the "Where to?"
-// city picker as the only location control.
-const DEFAULT_RADIUS_KM = 25;
-const PAGE_SIZE = 12;
 
 type SearchPageProps = {
   searchParams: Promise<{

@@ -2,20 +2,15 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { displayFont } from '@/app/_components/fonts';
-import { EmptyState } from '@/app/search/_components/EmptyState';
-import { SearchResults } from '@/app/search/_components/SearchResults';
+import { EmptyState } from '@/components/pages/EmptyState';
+import { SearchResults } from '@/components/pages/SearchResults';
 import { Button } from '@/components/ui/button';
-import { fetchCities, fetchSearchResults } from '@/lib/api';
+import { DEFAULT_RADIUS_KM, fetchCities, fetchSearchResults, PAGE_SIZE } from '@/lib/api';
 import { searchHref, slugify } from '@/lib/utils';
 
-// Same defaults /search uses for its own unfiltered view (ADR-0007) — this
-// page renders only that default, unfiltered page 1, never reading
-// searchParams itself.
-const DEFAULT_RADIUS_KM = 25;
-const PAGE_SIZE = 12;
-
-// Time-based ISR only (ADR-0007) — no on-demand revalidation wired to
-// Listing changes.
+// This page renders only /search's default, unfiltered page 1 (ADR-0007) —
+// no dates/guests/amenities, and no searchParams read here at all. Time-based
+// ISR only — no on-demand revalidation wired to Listing changes.
 export const revalidate = 3600;
 
 type CityStaysPageProps = {
@@ -58,14 +53,17 @@ export default async function CityStaysPage({ params }: CityStaysPageProps) {
     notFound();
   }
 
-  const { results } = await fetchSearchResults({
-    lat: city.coordinates.latitude,
-    lng: city.coordinates.longitude,
-    radiusKm: DEFAULT_RADIUS_KM,
-    country: city.country,
-    page: 1,
-    size: PAGE_SIZE,
-  });
+  const { results } = await fetchSearchResults(
+    {
+      lat: city.coordinates.latitude,
+      lng: city.coordinates.longitude,
+      radiusKm: DEFAULT_RADIUS_KM,
+      country: city.country,
+      page: 1,
+      size: PAGE_SIZE,
+    },
+    { revalidate },
+  );
 
   return (
     <main className="flex flex-1 flex-col bg-limestone">
