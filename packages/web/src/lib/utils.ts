@@ -44,6 +44,21 @@ export function carryDatesAndGuests(selection: {
   return query ? `?${query}` : '';
 }
 
+// Shared by /[city]/stays' generateStaticParams and its request-time slug
+// matching (ADR-0007), so a given city always resolves to the same slug and
+// the two can never drift apart.
+const COMBINING_DIACRITICAL_MARKS = /[̀-ͯ]/g;
+
+export function slugify(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(COMBINING_DIACRITICAL_MARKS, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 // Shared by Search's city, date, guest count, and amenities filters — each
 // navigates to /search with the full filter selection, only one field of
 // which it's actually changing itself.
