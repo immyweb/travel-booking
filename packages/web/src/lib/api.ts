@@ -29,8 +29,10 @@ const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 // request whose Origin doesn't match its trustedOrigins (see api/src/auth/auth.ts)
 // — real browser requests never reach Better Auth directly (it's mounted in
 // Express, not Next), so every server-to-server call here sets this
-// explicitly rather than relying on a browser to supply it.
-const SITE_URL = process.env.SITE_URL ?? 'http://localhost:3000';
+// explicitly rather than relying on a browser to supply it. Also exported
+// for the root layout's `metadataBase`, which URL-based metadata fields
+// (e.g. Search's canonical link) need to resolve their relative paths.
+export const SITE_URL = process.env.SITE_URL ?? 'http://localhost:3000';
 
 // Shared by /search and /[city]/stays, which both call fetchSearchResults
 // with these as their default, no-location-control view — a single source

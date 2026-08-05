@@ -1,7 +1,9 @@
 import { AmenitySchema, type Amenity } from '@travel-booking/core';
+import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { displayFont } from '@/app/_components/fonts';
 import { DEFAULT_RADIUS_KM, fetchCities, fetchSearchResults, PAGE_SIZE } from '@/lib/api';
+import { slugify } from '@/lib/utils';
 import { AmenitiesFilter } from './_components/AmenitiesFilter';
 import { CityPicker } from './_components/CityPicker';
 import { DateRangeFilter } from './_components/DateRangeFilter';
@@ -25,6 +27,45 @@ type SearchPageProps = {
   }>;
 };
 
+// A malformed or absent `page` falls back to page 1, same as the guest count
+// below — shared by the page component and generateMetadata so both agree on
+// what "page 1" means.
+function resolvePage(pageParam: string | undefined): number {
+  const requestedPage = Number(pageParam);
+  return requestedPage > 0 ? requestedPage : 1;
+}
+
+// /search's unfiltered, page-1 view of a city renders near-identical content
+// to that city's /[city]/stays page (ADR-0007) — this is true only when
+// checkIn/checkOut/guests/amenities are all absent, since any of those makes
+// for legitimately distinct, independently indexable results. Presence, not
+// validity, is what's checked here: even a malformed filter value means this
+// isn't the plain default view.
+function isDefaultCityView(params: Awaited<SearchPageProps['searchParams']>): boolean {
+  if (params.checkIn || params.checkOut || params.guests || params.amenities) {
+    return false;
+  }
+  return resolvePage(params.page) === 1;
+}
+
+export async function generateMetadata({ searchParams }: SearchPageProps): Promise<Metadata> {
+  const [params, cities] = await Promise.all([searchParams, fetchCities()]);
+
+  const selectedCity =
+    cities.find((city) => city.city === params.city && city.country === params.country) ??
+    cities[0];
+
+  if (!selectedCity || !isDefaultCityView(params)) {
+    return {};
+  }
+
+  return {
+    alternates: {
+      canonical: `/${slugify(selectedCity.city)}/stays`,
+    },
+  };
+}
+
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const [params, cities] = await Promise.all([searchParams, fetchCities()]);
 
@@ -40,8 +81,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     );
   }
 
-  const requestedPage = Number(params.page);
-  const page = requestedPage > 0 ? requestedPage : 1;
+  const page = resolvePage(params.page);
 
   // Dates are only meaningful (and only valid per the API's Zod schema) when
   // supplied together, so a lone in-progress selection doesn't get sent as a

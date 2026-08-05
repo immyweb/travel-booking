@@ -5,9 +5,9 @@ import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { FIXTURE_SEARCH_RESPONSE } from '@/mocks/fixtures';
+import { FIXTURE_CITIES, FIXTURE_SEARCH_RESPONSE } from '@/mocks/fixtures';
 import { server } from '@/mocks/server';
-import SearchPage from './page';
+import SearchPage, { generateMetadata } from './page';
 
 const API_URL = 'http://localhost:4000';
 
@@ -348,5 +348,43 @@ describe('SearchPage — search results map', () => {
     await user.click(await map.findByText('82 EUR'));
 
     expect(openSpy).toHaveBeenCalledWith('/listings/listing-1', '_blank', 'noopener,noreferrer');
+  });
+});
+
+describe('generateMetadata', () => {
+  it('emits a canonical link to /[city]/stays for the explicitly selected city', async () => {
+    const metadata = await generateMetadata({
+      searchParams: Promise.resolve({ city: 'Paris', country: 'France' }),
+    });
+
+    expect(metadata.alternates?.canonical).toBe('/paris/stays');
+  });
+
+  it('emits a canonical link to the default city when no searchParams are present', async () => {
+    const metadata = await generateMetadata({ searchParams: Promise.resolve({}) });
+
+    expect(metadata.alternates?.canonical).toBe(`/${FIXTURE_CITIES[0]!.city.toLowerCase()}/stays`);
+  });
+
+  it('emits the canonical link when page=1 is explicitly present, since that is still the default', async () => {
+    const metadata = await generateMetadata({
+      searchParams: Promise.resolve({ city: 'Paris', country: 'France', page: '1' }),
+    });
+
+    expect(metadata.alternates?.canonical).toBe('/paris/stays');
+  });
+
+  it.each([
+    ['checkIn', { checkIn: '2026-08-05' }],
+    ['checkOut', { checkOut: '2026-08-10' }],
+    ['guests', { guests: '2' }],
+    ['amenities', { amenities: 'wifi' }],
+    ['a non-default page', { page: '2' }],
+  ])('omits the canonical link when %s is present', async (_label, extraParams) => {
+    const metadata = await generateMetadata({
+      searchParams: Promise.resolve({ city: 'Paris', country: 'France', ...extraParams }),
+    });
+
+    expect(metadata.alternates?.canonical).toBeUndefined();
   });
 });

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { HomeFooter } from '@/app/_components/HomeFooter';
 import { HomeHeader } from '@/app/_components/HomeHeader';
+import { SITE_URL } from '@/lib/api';
 import './globals.css';
 
 const geistSans = Geist({
@@ -15,6 +16,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // Required for URL-based metadata fields defined with a relative path
+  // (e.g. Search's canonical link to /[city]/stays) to resolve to a full
+  // URL — Next.js errors at build time on a relative path with no
+  // metadataBase set anywhere in the tree.
+  metadataBase: new URL(SITE_URL),
   title: 'Travel Booking',
   description: 'Search, book, and manage stays.',
 };
