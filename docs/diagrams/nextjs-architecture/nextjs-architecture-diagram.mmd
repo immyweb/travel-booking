@@ -1,0 +1,71 @@
+flowchart TB
+    Browser["Browser"]
+
+    Proxy["proxy.ts (middleware)\ni18n locale routing + auth fast-gate\n(cookie-presence check only)"]
+
+    subgraph I18n["next-intl -- src/i18n"]
+        Routing["routing.ts\nlocales: en, fr -- as-needed prefix"]
+        Request["request.ts\ngetRequestConfig -> loads messages/&lcub;locale&rcub;.json"]
+        Navigation["navigation.ts\nlocale-aware Link / redirect / useRouter"]
+    end
+
+    subgraph Layout["&lsqb;locale&rsqb;/layout.tsx -- root layout"]
+        RootLayout["generateStaticParams(locales)\nNextIntlClientProvider\nHomeHeader / HomeFooter"]
+    end
+
+    subgraph Pages["App Router pages, grouped by rendering strategy"]
+        direction TB
+        SSR["SSR, dynamic (cache: 'no-store')\n/search, /listings/:id,\n/listings/:id/book, /bookings/:id,\n/my-bookings"]
+        ISR["ISR (revalidate = 3600)\n/:city/stays\ngenerateStaticParams from /search/cities"]
+        Static["Static content\n/about, /terms, /privacy,\n/cookies, /accessibility,\n/sign-in, /sign-up"]
+    end
+
+    subgraph Actions["Server Actions ('use server')"]
+        BookingActions["submitBooking()\ncheckBookingStatus()"]
+        AuthActions["submitSignIn()\nsubmitSignUp()"]
+    end
+
+    subgraph ClientComponents["Client components ('use client')"]
+        Forms["Forms\nreact-hook-form + zod"]
+        PaymentStep["PaymentStep\nStripe Elements / CardElement"]
+        Watcher["PendingBookingWatcher\npolls checkBookingStatus() every 3s"]
+        MapComp["SearchResultsMap\nmaplibre-gl"]
+    end
+
+    subgraph DataLayer["Data-access layer -- src/lib"]
+        Api["api.ts\nsingle gateway to Express (ADR-0002)\nfetchSearchResults, fetchListing,\ncreateBooking, fetchSession, signIn..."]
+        Cookies["cookies.ts\ncurrentCookieHeader() / forwardSetCookies()"]
+    end
+
+    Express["Express API\n(packages/api)"]
+    Stripe["Stripe"]
+
+    Browser --> Proxy
+    Proxy --> Routing
+    Proxy --> RootLayout
+    RootLayout --> Request
+    RootLayout --> Pages
+
+    Pages --> SSR
+    Pages --> ISR
+    Pages --> Static
+
+    SSR --> Api
+    ISR --> Api
+    Static -.sign-in/sign-up forms.-> Forms
+
+    Forms --> BookingActions
+    Forms --> AuthActions
+    SSR -.renders.-> Forms
+    SSR -.renders.-> PaymentStep
+    SSR -.renders.-> Watcher
+    SSR -.renders.-> MapComp
+
+    BookingActions --> Api
+    AuthActions --> Api
+    Watcher --> BookingActions
+    PaymentStep -->|stripe.confirmCardPayment\nclient-side, bypasses lib/api.ts| Stripe
+
+    Api --> Cookies
+    Api -->|REST over HTTP| Express
+    Navigation -.used by.-> Pages

@@ -1,0 +1,41 @@
+flowchart TB
+    subgraph Client["Browser"]
+        Pages["SSR / hydrated pages"]
+        StripeElements["Stripe Elements\n(CardElement)"]
+    end
+
+    subgraph Web["Next.js -- packages/web"]
+        Proxy["proxy.ts\n(i18n routing + auth gate)"]
+        Router["App Router\n(SSR/RSC pages + Server Actions)"]
+    end
+
+    subgraph Api["Express API -- packages/api (internal-only, ADR-0002)"]
+        Auth["Better Auth\n/api/auth/*"]
+        Search["/search\n/search/cities"]
+        Listings["/listings/:id"]
+        Bookings["/bookings\n/bookings/mine\n/bookings/:id"]
+        Webhook["/webhooks/stripe"]
+    end
+
+    DB[("PostgreSQL + PostGIS\nvia Drizzle")]
+    Stripe["Stripe"]
+    Resend["Resend\n(react-email templates)"]
+
+    Pages -->|HTTP request| Proxy --> Router
+    Router -.renders.-> StripeElements
+
+    Router -->|REST| Search
+    Router -->|REST| Listings
+    Router -->|REST, session cookie forwarded| Bookings
+    Router -->|sign-up / sign-in / sign-out / get-session| Auth
+
+    Search --> DB
+    Listings --> DB
+    Bookings --> DB
+    Auth --> DB
+
+    Bookings -->|create PaymentIntent| Stripe
+    StripeElements -->|confirm payment\nwith clientSecret| Stripe
+    Stripe -->|payment_intent.succeeded webhook| Webhook
+    Webhook -->|pending -> confirmed,\nor refund if orphaned| DB
+    Webhook -->|send confirmation email| Resend

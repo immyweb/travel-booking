@@ -1,0 +1,76 @@
+sequenceDiagram
+    autonumber
+    actor Browser
+    participant Next as Next.js<br/>(Server Actions / RSC)
+    participant Express as Express<br/>(/bookings, /webhooks/stripe)
+    participant Stripe
+    participant DB as Postgres
+    participant Resend
+
+    rect rgb(235, 245, 255)
+    Note over Browser,DB: 1. Reserve dates and start payment (POST /bookings)
+    Browser->>Next: submit booking form -> submitBooking() Server Action
+    Next->>Express: POST /bookings<br/>Cookie forwarded (userId from session, never client-supplied)
+    Express->>DB: INSERT booking status='pending'<br/>(EXCLUDE constraint reserves the dates)
+    alt overlapping dates, hold > 15 min old
+        Express->>DB: DELETE the stale pending row, retry the insert
+    else overlapping dates, still within hold
+        Express-->>Next: 409 Conflict
+        Next-->>Browser: show "dates no longer available"
+    end
+    Express->>Stripe: paymentIntents.create<br/>(amount, currency, metadata.bookingId)
+    Stripe-->>Express: PaymentIntent { id, client_secret }
+    Express->>DB: UPDATE booking SET stripePaymentIntentId
+    Express-->>Next: 201 { booking, clientSecret }
+    Next-->>Browser: render PaymentStep (mounts Stripe Elements)
+    end
+
+    rect rgb(255, 248, 235)
+    Note over Browser,Stripe: 2. Confirm payment - entirely client-side (ADR-0011)
+    Browser->>Browser: Guest enters card into CardElement
+    Browser->>Stripe: stripe.confirmCardPayment(clientSecret, { card })
+    Note right of Stripe: Express/Next are never in this call -<br/>card details never touch our servers
+    alt card declined
+        Stripe-->>Browser: error - Guest can retry, same PaymentIntent
+    else payment succeeds
+        Stripe-->>Browser: success
+        Browser->>Browser: router.push(/bookings/:id)<br/>(client-side nav, no Stripe return_url)
+    end
+    end
+
+    rect rgb(240, 255, 240)
+    Note over Stripe,Resend: 3. Stripe confirms asynchronously via webhook
+    Stripe->>Express: POST /webhooks/stripe (payment_intent.succeeded)<br/>raw body, signed
+    Express->>Express: verifyWebhookSignature(payload, stripe-signature)
+    Express->>DB: SELECT booking by PaymentIntent.metadata.bookingId
+    alt booking not found (hold already reclaimed)
+        Express->>Stripe: refund(paymentIntentId)
+    else already confirmed (redelivery)
+        Express-->>Stripe: 200 (no-op)
+    else booking still pending
+        Express->>Stripe: retrieve PaymentIntent (expand payment_method)
+        Stripe-->>Express: card last4
+        Express->>DB: UPDATE booking SET status='confirmed', cardLast4<br/>WHERE status='pending'
+        Express->>Resend: send booking confirmation email<br/>(idempotencyKey: booking-confirmation/:id)
+    end
+    Express-->>Stripe: 200 OK
+    end
+
+    rect rgb(250, 240, 255)
+    Note over Browser,DB: 4. Confirmation page catches up to the webhook
+    Browser->>Next: GET /bookings/:id
+    Next->>Express: GET /bookings/:id
+    Express->>DB: SELECT booking
+    DB-->>Express: status still 'pending' (webhook may lag)
+    Express-->>Next: booking
+    Next-->>Browser: render "confirming payment" + mount PendingBookingWatcher
+    loop every 3s, up to ~60s
+        Browser->>Next: checkBookingStatus() Server Action
+        Next->>Express: GET /bookings/:id
+        Express->>DB: SELECT booking
+        DB-->>Express: status
+        Express-->>Next: status
+        Next-->>Browser: status
+    end
+    Browser->>Browser: status='confirmed' -> router.refresh()<br/>re-renders the confirmed view
+    end

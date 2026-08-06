@@ -1,0 +1,81 @@
+erDiagram
+    LISTINGS ||--o{ BOOKINGS : "booked as"
+    USER ||--o{ BOOKINGS : "makes"
+    USER ||--o{ SESSION : "has"
+    USER ||--o{ ACCOUNT : "has"
+
+    LISTINGS {
+        uuid id PK
+        text title
+        integer price
+        varchar currency
+        integer max_guests
+        amenity_array amenities
+        text city
+        text country
+        geography_point location
+        text_array images
+    }
+
+    BOOKINGS {
+        uuid id PK
+        uuid listing_id FK
+        text user_id FK
+        date check_in
+        date check_out
+        text guest_name
+        text guest_email
+        integer guests
+        integer total_price
+        varchar currency
+        booking_status status
+        text stripe_payment_intent_id
+        text card_last4
+        timestamp created_at
+    }
+
+    USER {
+        text id PK
+        text name
+        text email UK
+        boolean email_verified
+        text image
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    SESSION {
+        text id PK
+        timestamp expires_at
+        text token UK
+        timestamp created_at
+        timestamp updated_at
+        text ip_address
+        text user_agent
+        text user_id FK
+    }
+
+    ACCOUNT {
+        text id PK
+        text account_id
+        text provider_id
+        text user_id FK
+        text access_token
+        text refresh_token
+        text id_token
+        timestamp access_token_expires_at
+        timestamp refresh_token_expires_at
+        text scope
+        text password
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    VERIFICATION {
+        text id PK
+        text identifier
+        text value
+        timestamp expires_at
+        timestamp created_at
+        timestamp updated_at
+    }

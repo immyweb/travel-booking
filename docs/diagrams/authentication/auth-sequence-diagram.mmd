@@ -1,0 +1,46 @@
+sequenceDiagram
+    autonumber
+    actor Browser
+    participant Proxy as Next.js proxy.ts
+    participant Next as Next.js<br/>(Server Actions / RSC)
+    participant Express as Express<br/>(Better Auth, mounted at /api/auth/*)
+    participant DB as Postgres<br/>(user / session tables)
+
+    rect rgb(235, 245, 255)
+    Note over Browser,DB: Sign in (sign-up mirrors this via /api/auth/sign-up/email)
+    Browser->>Next: submit sign-in form -> submitSignIn() Server Action
+    Next->>Express: POST /api/auth/sign-in/email<br/>Origin: SITE_URL (checked against trustedOrigins)
+    Express->>DB: look up user, verify password
+    DB-->>Express: match
+    Express-->>Next: 200 OK + Set-Cookie: better-auth.session_token
+    Next->>Next: forwardSetCookies()<br/>re-sets cookie on Next's own response
+    Next-->>Browser: Set-Cookie + redirect to originally requested page
+    end
+
+    rect rgb(255, 248, 235)
+    Note over Browser,DB: Visiting a protected route later (e.g. /listings/:id/book)
+    Browser->>Proxy: GET /listings/:id/book (cookie attached)
+    Proxy->>Proxy: fast check: is better-auth.session_token present?<br/>(no DB round trip - not the real auth check)
+    Proxy-->>Next: cookie present -> let request through
+    Next->>Express: GET /api/auth/get-session<br/>Cookie + Origin forwarded explicitly
+    Express->>DB: validate session token
+    DB-->>Express: session + user, or none
+    Express-->>Next: 200 { user } | { user: null }
+    alt no session
+        Next-->>Browser: redirect to /sign-in?redirect=...
+    else session valid
+        Next-->>Browser: render the protected page
+    end
+    end
+
+    rect rgb(240, 255, 240)
+    Note over Browser,DB: Authenticated write (e.g. POST /bookings)
+    Browser->>Next: submit booking form -> Server Action
+    Next->>Express: POST /bookings<br/>Cookie forwarded (no Origin needed - not a Better Auth route)
+    Express->>Express: auth.api.getSession(headers)<br/>in-process call, no HTTP hop
+    Express->>DB: validate session token
+    DB-->>Express: session.user.id
+    Express->>DB: insert booking with userId from session<br/>(never trusts a client-supplied userId)
+    Express-->>Next: 201 Created
+    Next-->>Browser: render result
+    end
