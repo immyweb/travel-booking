@@ -45,7 +45,7 @@ export function SearchResultsSection({
         <EmptyState />
       ) : (
         <>
-          <p className="font-mono text-xs text-azulejo/60">
+          <p className="font-mono text-xs text-azulejo/70">
             {t('staysFound', { count: pagination.total })}
           </p>
           <SearchResults results={results} checkIn={checkIn} checkOut={checkOut} guests={guests} />

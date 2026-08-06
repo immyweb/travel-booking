@@ -28,7 +28,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
     <main className="flex flex-1 flex-col bg-limestone">
       <div className="motion-safe:animate-[rise-in_0.5s_ease-out] mx-auto flex w-full max-w-md flex-col gap-8 px-6 py-12 sm:py-16">
         <div className="flex flex-col gap-1.5">
-          <p className="font-mono text-xs tracking-wide text-azulejo/60 uppercase">
+          <p className="font-mono text-xs tracking-wide text-azulejo/70 uppercase">
             {t('eyebrow')}
           </p>
           <h1

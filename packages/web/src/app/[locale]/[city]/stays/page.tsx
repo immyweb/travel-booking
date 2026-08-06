@@ -75,7 +75,7 @@ export default async function CityStaysPage({ params }: CityStaysPageProps) {
       <div className="motion-safe:animate-[rise-in_0.5s_ease-out] border-b border-azulejo/10 bg-white">
         <div className="mx-auto flex max-w-6xl flex-col gap-5 px-6 py-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="font-mono text-xs tracking-wide text-azulejo/60 uppercase">
+            <p className="font-mono text-xs tracking-wide text-azulejo/70 uppercase">
               {t('eyebrow')}
             </p>
             <h1

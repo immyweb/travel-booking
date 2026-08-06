@@ -167,7 +167,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       <div className="motion-safe:animate-[rise-in_0.5s_ease-out] border-b border-azulejo/10 bg-white">
         <div className="mx-auto flex max-w-6xl flex-col gap-5 px-6 py-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="font-mono text-xs tracking-wide text-azulejo/60 uppercase">
+            <p className="font-mono text-xs tracking-wide text-azulejo/70 uppercase">
               {t('resultsEyebrow')}
             </p>
             <h1

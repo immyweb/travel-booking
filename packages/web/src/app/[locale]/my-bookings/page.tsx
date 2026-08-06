@@ -44,7 +44,7 @@ export default async function MyBookingsPage() {
         <div className="relative flex flex-col gap-1.5">
           <TileMark className="pointer-events-none absolute -top-2 right-0 -z-10 size-28 text-azulejo/[0.04] sm:size-36" />
           <div className="flex items-baseline justify-between gap-3">
-            <p className="font-mono text-xs tracking-wide text-azulejo/60 uppercase">
+            <p className="font-mono text-xs tracking-wide text-azulejo/70 uppercase">
               {t('eyebrow')}
             </p>
             {bookings.length > 0 && (

@@ -107,7 +107,7 @@ export default async function ListingDetailPage({ params, searchParams }: Listin
   return (
     <main className="flex flex-1 flex-col bg-limestone">
       <div className="motion-safe:animate-[rise-in_0.5s_ease-out] mx-auto w-full max-w-6xl px-6 py-8 sm:py-10">
-        <p className="font-mono text-xs tracking-wide text-azulejo/60 uppercase">
+        <p className="font-mono text-xs tracking-wide text-azulejo/70 uppercase">
           {listing.city}, {listing.country}
         </p>
 
